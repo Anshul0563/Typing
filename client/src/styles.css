@@ -333,7 +333,9 @@ button,a { touch-action:manipulation; }
 .student-exam-card:focus-within,.quick-action:focus-visible,.result-metric-card:hover { border-color:color-mix(in srgb,var(--brand) 40%,var(--student-border));box-shadow:0 12px 28px rgba(27,39,66,.09); }
 .available-label i { box-shadow:0 0 0 4px rgba(25,168,120,.12); }
 .loader-wrap { text-align:center; }
-.spinner { flex:none; }
+.page-brand-loader { flex-direction:column;gap:4px; }
+.page-brand-loader .global-loader-mark { margin-bottom:10px; }
+.page-brand-loader>strong { color:var(--ink);font-size:13px; }
 .global-loader { position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:rgba(248,250,252,.72);backdrop-filter:blur(5px);animation:loader-fade .18s ease both; }
 .global-loader-card { width:180px;min-height:164px;border:1px solid rgba(215,222,234,.9);border-radius:20px;background:rgba(255,255,255,.96);box-shadow:0 24px 70px rgba(20,32,55,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px;text-align:center; }
 .global-loader-mark { position:relative;width:66px;height:66px;display:grid;place-items:center;margin-bottom:13px; }

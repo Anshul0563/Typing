@@ -1,1 +1,1 @@
-export function Loader({ label = 'Loading…' }) { return <div className="loader-wrap" role="status" aria-live="polite" aria-busy="true"><span className="spinner" aria-hidden="true" /><span>{label}</span></div>; }
+export function Loader({ label = 'Loading…' }) { return <div className="loader-wrap page-brand-loader" role="status" aria-live="polite" aria-busy="true"><span className="global-loader-mark" aria-hidden="true"><img src="/logo.png" alt="" /><i /><b /></span><strong>{label}</strong></div>; }
