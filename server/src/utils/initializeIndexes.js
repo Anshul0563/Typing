@@ -6,37 +6,12 @@ import { Result } from '../models/Result.js';
  */
 export const initializeAnalyticsIndexes = async () => {
   try {
-    // Index for user results with creation date
-    await Result.collection.createIndex({
-      user: 1,
-      createdAt: -1
-    });
-
-    // Index for exam-wise statistics
-    await Result.collection.createIndex({
-      exam: 1,
-      user: 1
-    });
-
-    // Index for date-based aggregations
-    await Result.collection.createIndex({
-      createdAt: -1,
-      user: 1
-    });
-
-    // Index for test mode analysis
-    await Result.collection.createIndex({
-      testMode: 1,
-      user: 1,
-      createdAt: -1
-    });
-
-    // Index for performance trends
-    await Result.collection.createIndex({
-      user: 1,
-      dayOfWeek: 1,
-      hourOfDay: 1
-    });
+    await Result.collection.createIndexes([
+      { key: { user: 1, createdAt: -1 }, name: 'user_1_createdAt_-1' },
+      { key: { exam: 1, user: 1 }, name: 'exam_1_user_1' },
+      { key: { testMode: 1, user: 1, createdAt: -1 }, name: 'testMode_1_user_1_createdAt_-1' },
+      { key: { user: 1, dayOfWeek: 1, hourOfDay: 1 }, name: 'user_1_dayOfWeek_1_hourOfDay_1' }
+    ]);
 
     console.log('Analytics indexes initialized');
   } catch (error) {
