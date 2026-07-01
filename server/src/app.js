@@ -20,6 +20,7 @@ const allowedOrigins = env.clientUrl.split(',').map((item) => item.trim());
 if (env.nodeEnv !== 'production') allowedOrigins.push('http://localhost:5173', 'http://127.0.0.1:5173');
 const uniqueAllowedOrigins = [...new Set(allowedOrigins.filter(Boolean))];
 const isAllowedOrigin = (origin) => uniqueAllowedOrigins.some((allowedOrigin) => {
+  if (allowedOrigin === '*') return env.nodeEnv !== 'production';
   if (allowedOrigin === origin) return true;
   if (!allowedOrigin.includes('*')) return false;
   const pattern = new RegExp(`^${allowedOrigin.split('*').map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`);
@@ -35,6 +36,7 @@ app.use(cors({
 app.use(compression());
 app.use(express.json({ limit: '100kb' }));
 if (env.nodeEnv !== 'test') app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
+app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 1000, standardHeaders: 'draft-8', legacyHeaders: false }));
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, limit: 100, standardHeaders: 'draft-8', legacyHeaders: false }));
 app.get('/api/health', (_req, res) => res.json({ success: true, status: 'healthy' }));
 app.use('/api/auth', authRouter);
