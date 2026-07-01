@@ -1,6 +1,7 @@
 import { app } from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/db.js';
 import { env } from './config/env.js';
+import { ensureAdminUser } from './utils/ensureAdminUser.js';
 import { initializeAnalyticsIndexes } from './utils/initializeIndexes.js';
 
 const DATABASE_RETRY_DELAY_MS = 10000;
@@ -11,6 +12,11 @@ async function connectToDatabase() {
   try {
     await connectDatabase();
     console.log('Database connected');
+    await ensureAdminUser({
+      email: process.env.ADMIN_EMAIL,
+      password: process.env.ADMIN_PASSWORD,
+      logger: console
+    });
     await initializeAnalyticsIndexes();
   } catch (error) {
     console.error(`Database connection failed: ${error.message}`);
