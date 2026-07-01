@@ -62,7 +62,7 @@ function buildComparison(referenceText, typedText) {
 }
 
 function HighlightedText({ parts }) {
-  return <p className="comparison-text">{parts.map((part, index) => part.type === 'correct' ? part.text : <mark key={index} className={`compare-${part.type}`}>{part.text}</mark>)}</p>;
+  return <p className="comparison-text">{parts.map((part, index) => (part.severity || part.type) === 'correct' ? part.text : <mark key={index} className={`compare-${part.severity || 'full'}`} title={part.category}>{part.text}</mark>)}</p>;
 }
 
 function ResultPanel({ title, icon: Icon, children }) {
@@ -77,7 +77,7 @@ export default function Result() {
 
   useEffect(() => { if (!result) api(`/results/${id}`).then((d) => setResult(d.result)).catch((e) => setError(e.message)); }, [id, result]);
 
-  const comparison = useMemo(() => buildComparison(result?.paragraph?.content || '', result?.typedText || ''), [result]);
+  const comparison = useMemo(() => result?.comparison?.referenceParts ? result.comparison : buildComparison(result?.paragraph?.content || '', result?.typedText || ''), [result]);
 
   if (error) return <Notice>{error}</Notice>;
   if (!result) return <Loader label="Calculating result…" />;
@@ -94,7 +94,7 @@ export default function Result() {
   ];
   const breakdownGroups = [
     { title: 'Speed & Scoring', detail: 'Final WPM and penalty calculation.', icon: Gauge, tone: 'blue', items: [['Gross WPM', result.grossWpm, 'good'], ['Net WPM', result.netWpm, 'good'], ['Error units', result.errorUnits ?? '-', 'bad'], ['Penalty', `${result.errorPenalty ?? 1}x`, 'neutral']] },
-    { title: 'Character Accuracy', detail: 'Character-by-character passage match.', icon: Target, tone: 'green', items: [['Correct', result.correctCharacters, 'good'], ['Incorrect', result.wrongCharacters, 'bad'], ['Omitted', result.omittedCharacters, 'bad'], ['Extra', result.extraCharacters, 'neutral'], ['Total errors', result.totalErrors, 'bad'], ['Reference chars', result.referenceCharacters ?? '-', 'neutral']] },
+    { title: 'Character Accuracy', detail: result.evaluationMode === 'ssc-stenographer' ? 'SSC: every mistake has full weight.' : 'Practice: half errors have 0.5 weight.', icon: Target, tone: 'green', items: [['Correct chars', result.correctCharacters, 'good'], ['Full errors', result.fullErrors ?? result.totalErrors, 'bad'], ['Half errors', result.halfErrors ?? 0, 'neutral'], ['Weighted errors', result.weightedErrors ?? result.totalErrors, 'bad'], ['Reference chars', result.referenceCharacters ?? '-', 'neutral']] },
     { title: 'Word Accuracy', detail: 'Word-level alignment summary.', icon: FileText, tone: 'violet', items: [['Typed words', result.typedWords ?? '-', 'neutral'], ['Reference words', result.referenceWords ?? '-', 'neutral'], ['Wrong words', result.wrongWords ?? '-', 'bad'], ['Omitted words', result.omittedWords ?? '-', 'bad'], ['Extra words', result.extraWords ?? '-', 'neutral']] },
     { title: 'Typing Activity', detail: 'Raw activity captured during test.', icon: Keyboard, tone: 'amber', items: [['Typed chars', result.typedCharacters ?? '-', 'neutral'], ['Total keystrokes', result.totalKeystrokes ?? '-', 'neutral'], ['Backspaces', result.backspaceCount ?? '-', 'neutral'], ['Time taken', formatTime(result.timeTaken), 'neutral']] }
   ];
