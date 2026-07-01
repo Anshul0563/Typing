@@ -6,7 +6,7 @@ const examSchema = new mongoose.Schema({
   language: { type: String, enum: ['English', 'Hindi'], required: true, index: true },
   durationMinutes: { type: Number, required: true, min: 1, max: 120 },
   paragraphLength: { type: Number, required: true, min: 50 },
-  category: { type: String, enum: ['SSC', 'Railway', 'Police', 'High Court', 'Banking', 'State PSC', 'Practice'], required: true, index: true },
+  category: { type: String, enum: ['SSC', 'DSSSB', 'Delhi Police', 'Railway', 'Central Armed Police Forces', 'Education', 'CSIR', 'AIIMS', 'High Courts', 'State Exams', 'Practice'], required: true, index: true },
   logo: { type: String, required: true, trim: true },
   scoringRule: {
     mode: { type: String, enum: ['standard-word', 'character'], default: 'standard-word' },

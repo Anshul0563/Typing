@@ -20,7 +20,7 @@ app.set('trust proxy', 1);
 app.use(cors(corsOptions));
 app.use(helmet());
 app.use(compression());
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '500kb' }));
 if (env.nodeEnv !== 'test') app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 
 app.get('/', (_req, res) => {

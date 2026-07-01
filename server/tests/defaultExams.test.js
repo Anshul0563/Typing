@@ -5,9 +5,39 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defaultExams } from '../src/data/defaultExams.js';
 
-test('default catalogue contains 36 unique, complete exams', () => {
-  assert.equal(defaultExams.length, 36);
-  assert.equal(new Set(defaultExams.map(({ name }) => name)).size, 36);
+test('default catalogue contains only the approved exams', () => {
+  const approvedNames = [
+    'SSC Stenographer (English)',
+    'SSC Stenographer (Hindi)',
+    'SSC CGL DEST',
+    'SSC CHSL DEST',
+    'DSSSB JSA',
+    'DSSSB LDC',
+    'DSSSB Stenographer',
+    'Delhi Police Head Constable (Ministerial)',
+    'RRB NTPC',
+    'BSF Head Constable (Ministerial)',
+    'CRPF Head Constable (Ministerial)',
+    'CISF Head Constable (Ministerial)',
+    'ITBP Head Constable (Ministerial)',
+    'SSB Head Constable (Ministerial)',
+    'KVS LDC',
+    'NVS LDC',
+    'CSIR CASE',
+    'AIIMS CRE',
+    'Supreme Court JCA',
+    'Delhi High Court JJA',
+    'UPSSSC Stenographer',
+    'UPSSSC Junior Assistant',
+    'Rajasthan LDC',
+    'Bihar SSC Stenographer',
+    'Haryana CET Clerk',
+    'English Typing Practice',
+    'Hindi Typing Practice'
+  ];
+
+  assert.deepEqual(defaultExams.map(({ name }) => name), approvedNames);
+  assert.equal(new Set(defaultExams.map(({ name }) => name)).size, approvedNames.length);
   for (const exam of defaultExams) {
     assert.ok(exam.name && exam.organization && exam.category && exam.language);
     assert.deepEqual(exam.scoringRule, { mode: 'standard-word', errorPenalty: 1 });
