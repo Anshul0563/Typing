@@ -8,6 +8,7 @@ import { Loader } from '../components/Loader.jsx';
 import { Notice } from '../components/Toast.jsx';
 
 const characters = (value) => Array.from(String(value ?? '').normalize('NFC'));
+const testModes = ['Standard', 'TCS', 'NTA'];
 
 function TestPreference({ label, enabled, onChange, disabled }) {
   return <label className={`test-preference ${enabled ? 'is-on' : ''}`}><span>{label}</span><button type="button" role="switch" aria-checked={enabled} disabled={disabled} onClick={() => onChange(!enabled)}><i /></button><small>{enabled ? 'ON' : 'OFF'}</small></label>;
@@ -25,8 +26,8 @@ export default function TypingTest() {
 
   const persistSession = useCallback((overrides = {}) => {
     if (!data) return;
-    sessionStorage.setItem(storageKey, JSON.stringify({ data, typed: typedRef.current, endAt: endAtRef.current, testToken: testTokenRef.current, totalKeystrokes: keystrokesRef.current, backspaceCount: backspacesRef.current, backspaceEnabled, wordHighlight, ...overrides }));
-  }, [backspaceEnabled, data, storageKey, wordHighlight]);
+    sessionStorage.setItem(storageKey, JSON.stringify({ data, typed: typedRef.current, endAt: endAtRef.current, testToken: testTokenRef.current, totalKeystrokes: keystrokesRef.current, backspaceCount: backspacesRef.current, selectedMode, backspaceEnabled, wordHighlight, ...overrides }));
+  }, [backspaceEnabled, data, selectedMode, storageKey, wordHighlight]);
 
   useEffect(() => {
     const saved = sessionStorage.getItem(storageKey);
@@ -34,7 +35,7 @@ export default function TypingTest() {
       try {
         const session = JSON.parse(saved);
         if (session.data?.exam?._id === examId && session.endAt && session.testToken) {
-          setData(session.data); setTyped(session.typed || ''); typedRef.current = session.typed || ''; endAtRef.current = session.endAt; testTokenRef.current = session.testToken; keystrokesRef.current = session.totalKeystrokes || 0; backspacesRef.current = session.backspaceCount || 0; if (typeof session.backspaceEnabled === 'boolean') setBackspaceEnabled(session.backspaceEnabled); if (typeof session.wordHighlight === 'boolean') setWordHighlight(session.wordHighlight);
+          setData(session.data); setTyped(session.typed || ''); typedRef.current = session.typed || ''; endAtRef.current = session.endAt; testTokenRef.current = session.testToken; keystrokesRef.current = session.totalKeystrokes || 0; backspacesRef.current = session.backspaceCount || 0; if (testModes.includes(session.selectedMode)) setSelectedMode(session.selectedMode); if (typeof session.backspaceEnabled === 'boolean') setBackspaceEnabled(session.backspaceEnabled); if (typeof session.wordHighlight === 'boolean') setWordHighlight(session.wordHighlight);
           const remaining = Math.max(0, session.endAt - Date.now()); monotonicEndRef.current = performance.now() + remaining; setSeconds(Math.ceil(remaining / 1000)); activeRef.current = remaining > 0; setPhase(remaining > 0 ? 'active' : 'expired'); return;
         }
       } catch { sessionStorage.removeItem(storageKey); }
@@ -80,15 +81,15 @@ export default function TypingTest() {
   const begin = async () => {
     setPhase('starting'); setError('');
     try {
-      const session = await api(`/exams/${examId}/start`, { method: 'POST', body: JSON.stringify({ paragraphId: data.paragraph._id }) });
-      const remaining = Math.max(0, session.endsAt - Date.now()); testTokenRef.current = session.testToken; endAtRef.current = session.endsAt; monotonicEndRef.current = performance.now() + remaining; activeRef.current = true; setSeconds(Math.ceil(remaining / 1000)); setPhase('active'); persistSession({ endAt: session.endsAt, testToken: session.testToken });
+      const session = await api(`/exams/${examId}/start`, { method: 'POST', body: JSON.stringify({ paragraphId: data.paragraph._id, testMode: selectedMode }) });
+      const remaining = Math.max(0, session.endsAt - Date.now()); testTokenRef.current = session.testToken; endAtRef.current = session.endsAt; monotonicEndRef.current = performance.now() + remaining; activeRef.current = true; setSeconds(Math.ceil(remaining / 1000)); setPhase('active'); persistSession({ selectedMode, endAt: session.endsAt, testToken: session.testToken });
     } catch (e) { setError(e.message); setPhase('instructions'); }
   };
   const restart = async () => {
     activeRef.current = false; setPhase('starting');
     try {
-      const session = await api(`/exams/${examId}/start`, { method: 'POST', body: JSON.stringify({ paragraphId: data.paragraph._id }) });
-      const remaining = Math.max(0, session.endsAt - Date.now()); typedRef.current = ''; keystrokesRef.current = 0; backspacesRef.current = 0; testTokenRef.current = session.testToken; endAtRef.current = session.endsAt; monotonicEndRef.current = performance.now() + remaining; activeRef.current = true; setTyped(''); setSeconds(Math.ceil(remaining / 1000)); setPhase('active'); persistSession({ typed: '', endAt: session.endsAt, testToken: session.testToken, totalKeystrokes: 0, backspaceCount: 0 });
+      const session = await api(`/exams/${examId}/start`, { method: 'POST', body: JSON.stringify({ paragraphId: data.paragraph._id, testMode: selectedMode }) });
+      const remaining = Math.max(0, session.endsAt - Date.now()); typedRef.current = ''; keystrokesRef.current = 0; backspacesRef.current = 0; testTokenRef.current = session.testToken; endAtRef.current = session.endsAt; monotonicEndRef.current = performance.now() + remaining; activeRef.current = true; setTyped(''); setSeconds(Math.ceil(remaining / 1000)); setPhase('active'); persistSession({ typed: '', selectedMode, endAt: session.endsAt, testToken: session.testToken, totalKeystrokes: 0, backspaceCount: 0 });
     } catch (e) { setError(e.message); setPhase('ended'); }
   };
   const keepCaretAtEnd = () => {

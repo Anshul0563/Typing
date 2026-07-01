@@ -14,6 +14,10 @@ import {
 import './AnalyticsDashboard.css';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'];
+const formatDuration = (seconds) => {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  return `${Math.floor(total / 60)}m ${String(total % 60).padStart(2, '0')}s`;
+};
 
 export default function AnalyticsDashboard() {
   const { user } = useAuth();
@@ -191,7 +195,7 @@ export default function AnalyticsDashboard() {
             <div className="progress-card">
               <div className="progress-stat">
                 <span className="label">Speed Journey</span>
-                <span className="value">{progressReport.wpmStart} → {progressReport.wpmEnd}</span>
+                <span className="value">{progressReport.wpmStart ?? '0.00'} → {progressReport.wpmEnd ?? '0.00'}</span>
               </div>
               <p className="status">WPM progression in {progressReport.totalTestsInPeriod} tests</p>
             </div>
@@ -330,7 +334,7 @@ export default function AnalyticsDashboard() {
                     <td><strong>{result.wpm} WPM</strong></td>
                     <td>{result.accuracy.toFixed(1)}%</td>
                     <td>{result.errors}</td>
-                    <td>{Math.round(result.timeTaken / 60)}s</td>
+                    <td>{formatDuration(result.timeTaken)}</td>
                   </tr>
                 ))}
               </tbody>

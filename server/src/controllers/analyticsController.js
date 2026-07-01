@@ -293,7 +293,9 @@ export const getProgressReport = asyncHandler(async (req, res) => {
       data: {
         improvement: 0,
         trend: 'stable',
-        totalTestsInPeriod: 0
+        totalTestsInPeriod: 0,
+        wpmStart: '0.00',
+        wpmEnd: '0.00'
       }
     });
   }
