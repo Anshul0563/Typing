@@ -9,6 +9,7 @@ import { calculateElapsedSeconds } from '../utils/testTiming.js';
 
 const modeScoringRules = {
   TCS: { mode: 'character', errorPenalty: 1 },
+  // NTA is retained for historical/future CBT records; new typing sessions cannot start in NTA mode.
   NTA: { mode: 'standard-word', errorPenalty: 1 }
 };
 
@@ -22,7 +23,7 @@ export const submitResult = asyncHandler(async (req, res) => {
   let session;
   try { session = verifyTestToken(req.body.testToken); } catch { throw new AppError('Test session is invalid or expired', 400); }
   if (session.type !== 'typing-test' || session.sub !== req.user._id.toString() || session.paragraphId !== paragraph._id.toString() || session.examId !== exam._id.toString() || session.testMode !== req.body.testMode) throw new AppError('Test session does not match this submission', 400);
-  const existingResult = await Result.findOne({ testSessionId: session.jti }).populate('exam', 'name language').populate('paragraph', 'title');
+  const existingResult = await Result.findOne({ testSessionId: session.jti }).populate('exam', 'name language').populate('paragraph', 'title content');
   if (existingResult) return res.json({ success: true, result: existingResult });
   const elapsedSeconds = calculateElapsedSeconds(session.startedAt, Date.now(), exam.durationMinutes * 60);
   const typedLength = Array.from(req.body.typedText.normalize('NFC')).length;
@@ -30,12 +31,12 @@ export const submitResult = asyncHandler(async (req, res) => {
   if (typedLength > referenceLength + 1000) throw new AppError('Typed text exceeds the permitted test length', 400);
   const metrics = calculateResult(paragraph.content, req.body.typedText, elapsedSeconds, req.body, scoringRuleForMode(exam, req.body.testMode));
   const result = await Result.create({ testSessionId: session.jti, user: req.user._id, exam: exam._id, paragraph: paragraph._id, typedText: req.body.typedText, testMode: req.body.testMode, ...metrics });
-  res.status(201).json({ success: true, result: { ...result.toObject(), exam: { _id: exam._id, name: exam.name } } });
+  res.status(201).json({ success: true, result: { ...result.toObject(), exam: { _id: exam._id, name: exam.name }, paragraph: { _id: paragraph._id, title: paragraph.title, content: paragraph.content } } });
 });
 export const getResult = asyncHandler(async (req, res) => {
   const filter = { _id: req.params.id };
   if (req.user.role !== 'admin') filter.user = req.user._id;
-  const result = await Result.findOne(filter).populate('exam', 'name language').populate('paragraph', 'title');
+  const result = await Result.findOne(filter).populate('exam', 'name language').populate('paragraph', 'title content');
   if (!result) throw new AppError('Result not found', 404);
   res.json({ success: true, result });
 });

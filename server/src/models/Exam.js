@@ -15,7 +15,7 @@ const examSchema = new mongoose.Schema({
   testModes: [
     {
       name: { type: String, enum: ['TCS', 'NTA'], required: true },
-      isActive: { type: Boolean, default: true },
+      isActive: { type: Boolean, default() { return this.name !== 'NTA'; } },
       instructions: String
     }
   ],

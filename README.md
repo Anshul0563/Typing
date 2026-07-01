@@ -9,9 +9,18 @@ A production-oriented SSC typing practice platform built with React, Express and
 - Active exam dashboard with randomized passages
 - Exam-style typing screen with a single visible timer
 - Character comparison, active-word and cursor highlighting, paste protection, restart and auto-submit
+- TCS Mode as the primary SSC typing mode for TCS iON-style exams such as SSC CGL, CHSL, Stenographer, MTS and applicable Railway typing tests
 - Server-authoritative WPM, accuracy and error calculations
 - Admin overview, exam CRUD, searchable paragraph CRUD, user access control and website settings
 - Validation, rate limiting, secure HTTP headers, compression and centralized errors
+
+## Exam modes
+
+TCS Mode is the default and recommended typing mode for this SSC-focused project. It is intended for exams conducted on the TCS iON platform or similar interfaces, including SSC CGL, SSC CHSL, SSC Stenographer, SSC MTS and applicable Railway recruitment typing tests.
+
+Standard Mode is available for administrator-configured custom scoring rules.
+
+NTA Mode is not an SSC typing mode. It is reserved for future NTA-based CBT support for examinations such as JEE Main, NEET UG, CUET UG/PG, UGC NET and NCET, which are generally MCQ-based computer-based tests rather than typing tests.
 
 Administrators are stored in the `users` collection with `role: "admin"`. This avoids duplicating credentials and authentication logic in a separate collection while preserving a distinct, role-gated admin experience.
 

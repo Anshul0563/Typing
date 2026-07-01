@@ -5,7 +5,7 @@ const resultSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   exam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
   paragraph: { type: mongoose.Schema.Types.ObjectId, ref: 'Paragraph', required: true },
-  testMode: { type: String, enum: ['TCS', 'NTA', 'Standard'], default: 'Standard' },
+  testMode: { type: String, enum: ['TCS', 'NTA', 'Standard'], default: 'TCS' },
   typedText: { type: String, default: '' },
   grossWpm: Number, netWpm: Number, accuracy: Number,
   correctCharacters: Number, wrongCharacters: Number,

@@ -25,7 +25,7 @@ router.get('/trend/:userId', getPerformanceTrend);
 // Get exam-wise statistics
 router.get('/exam-stats/:userId', getExamWiseStats);
 
-// Compare performance across test modes (TCS, NTA, Standard)
+// Compare performance across test modes. NTA may appear only in historical or future CBT data.
 router.get('/mode-comparison/:userId', getTestModeComparison);
 
 // Get weekly activity pattern (best performing days)
