@@ -2,7 +2,7 @@
   "name": "typepath-ssc",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",

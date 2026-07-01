@@ -10,6 +10,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "22"
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: MONGODB_URI
