@@ -10,7 +10,8 @@ import { calculateElapsedSeconds } from '../utils/testTiming.js';
 const modeScoringRules = {
   TCS: { mode: 'character', errorPenalty: 1 },
   // NTA is retained for historical/future CBT records; new typing sessions cannot start in NTA mode.
-  NTA: { mode: 'standard-word', errorPenalty: 1 }
+  NTA: { mode: 'standard-word', errorPenalty: 1 },
+  Custom: { mode: 'standard-word', errorPenalty: 1 }
 };
 
 const scoringRuleForMode = (exam, testMode) => modeScoringRules[testMode] || exam.scoringRule;
@@ -25,7 +26,7 @@ export const submitResult = asyncHandler(async (req, res) => {
   if (session.type !== 'typing-test' || session.sub !== req.user._id.toString() || session.paragraphId !== paragraph._id.toString() || session.examId !== exam._id.toString() || session.testMode !== req.body.testMode) throw new AppError('Test session does not match this submission', 400);
   const existingResult = await Result.findOne({ testSessionId: session.jti }).populate('exam', 'name language').populate('paragraph', 'title content');
   if (existingResult) return res.json({ success: true, result: existingResult });
-  const elapsedSeconds = calculateElapsedSeconds(session.startedAt, Date.now(), exam.durationMinutes * 60);
+  const elapsedSeconds = calculateElapsedSeconds(session.startedAt, Date.now(), (session.endsAt - session.startedAt) / 1000);
   const typedLength = Array.from(req.body.typedText.normalize('NFC')).length;
   const referenceLength = Array.from(paragraph.content.normalize('NFC')).length;
   if (typedLength > referenceLength + 1000) throw new AppError('Typed text exceeds the permitted test length', 400);

@@ -18,7 +18,9 @@ export const updateExam = asyncHandler(async (req, res) => {
 export const deleteExam = asyncHandler(async (req, res) => {
   const exam = await Exam.findById(req.params.id);
   if (!exam) throw new AppError('Exam not found', 404);
-  await Promise.all([Paragraph.deleteMany({ exam: exam._id }), Result.deleteMany({ exam: exam._id })]);
+  const resultCount = await Result.countDocuments({ exam: exam._id });
+  if (resultCount) throw new AppError(`This exam has ${resultCount} saved result${resultCount === 1 ? '' : 's'}. Disable it instead to preserve student history.`, 409);
+  await Paragraph.deleteMany({ exam: exam._id });
   await exam.deleteOne();
   res.status(204).send();
 });

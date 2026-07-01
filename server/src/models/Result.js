@@ -5,7 +5,7 @@ const resultSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   exam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true },
   paragraph: { type: mongoose.Schema.Types.ObjectId, ref: 'Paragraph', required: true },
-  testMode: { type: String, enum: ['TCS', 'NTA', 'Standard'], default: 'TCS' },
+  testMode: { type: String, enum: ['TCS', 'NTA', 'Custom', 'Standard'], default: 'TCS' },
   typedText: { type: String, default: '' },
   grossWpm: Number, netWpm: Number, accuracy: Number,
   correctCharacters: Number, wrongCharacters: Number,
@@ -24,8 +24,9 @@ const resultSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 resultSchema.pre('save', function (next) {
-  if (!this.dayOfWeek) this.dayOfWeek = new Date(this.createdAt).getDay();
-  if (!this.hourOfDay) this.hourOfDay = new Date(this.createdAt).getHours();
+  const timestamp = this.createdAt || new Date();
+  if (this.dayOfWeek == null) this.dayOfWeek = timestamp.getDay();
+  if (this.hourOfDay == null) this.hourOfDay = timestamp.getHours();
   next();
 });
 

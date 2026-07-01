@@ -53,7 +53,7 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
               avgAccuracy: { $avg: '$accuracy' },
               maxWpm: { $max: '$netWpm' },
               minWpm: { $min: '$netWpm' },
-              totalErrors: { $sum: '$totalErrors' }
+              totalErrors: { $sum: { $ifNull: ['$weightedErrors', '$totalErrors'] } }
             }
           }
         ]
@@ -364,7 +364,7 @@ export const getDetailedReport = asyncHandler(async (req, res) => {
           avgAccuracy: { $avg: '$accuracy' },
           bestWpm: { $max: '$netWpm' },
           worstWpm: { $min: '$netWpm' },
-          totalErrors: { $sum: '$totalErrors' }
+          totalErrors: { $sum: { $ifNull: ['$weightedErrors', '$totalErrors'] } }
         }
       }
     ])
@@ -395,7 +395,7 @@ export const getDetailedReport = asyncHandler(async (req, res) => {
         exam: r.exam?.name || 'Unknown',
         wpm: r.netWpm,
         accuracy: r.accuracy,
-        errors: r.totalErrors,
+        errors: r.weightedErrors ?? r.totalErrors,
         testMode: r.testMode,
         timeTaken: r.timeTaken
       })),

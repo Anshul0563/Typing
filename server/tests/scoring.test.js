@@ -127,6 +127,32 @@ test('SSC Stenographer mode promotes every half-category mistake to a full error
   assert.equal(ssc.comparison.typedParts.filter((part) => part.severity !== 'correct').every((part) => part.severity === 'full'), true);
 });
 
+test('every configured half-error category receives exactly half weight in practice mode', () => {
+  const cases = [
+    ['spacing', 'one two', 'one  two'],
+    ['capitalization', 'Hello', 'hello'],
+    ['punctuation', 'Hello, world', 'Hello world'],
+    ['transposition', 'ab', 'ba'],
+    ['paragraphic', 'one\ntwo', 'one two']
+  ];
+  for (const [category, source, typed] of cases) {
+    const result = classifyErrors(source, typed);
+    assert.equal(result.counts[category], 1, category);
+    assert.equal(result.fullErrors, 0, category);
+    assert.equal(result.halfErrors, 1, category);
+    assert.equal(result.weightedErrors, 0.5, category);
+  }
+});
+
+test('persisted comparison spans and category totals share one source of truth', () => {
+  const result = calculateResult('Hello, one two', 'hello one  too', 60);
+  const categoryTotal = Object.values(result.errorBreakdown).reduce((sum, value) => sum + value, 0);
+  assert.equal(categoryTotal, result.fullErrors + result.halfErrors);
+  assert.equal(result.weightedErrors, result.fullErrors + result.halfErrors * 0.5);
+  assert.equal(result.comparison.referenceParts.map((part) => part.text).join(''), 'Hello, one two');
+  assert.equal(result.comparison.typedParts.map((part) => part.text).join(''), 'hello one  too');
+});
+
 test('alignment invariants hold across representative short strings', () => {
   const samples = ['', 'a', ' ', 'ab', 'a b', 'है', 'A\nB'];
   for (const source of samples) for (const typed of samples) {

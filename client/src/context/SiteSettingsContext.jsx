@@ -9,14 +9,14 @@ export function SiteSettingsProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    api('/settings')
+  const refreshSettings = () => api('/settings')
       .then((data) => setSettings({ ...defaults, ...data.settings }))
       .catch((err) => setError(err.message || 'Unable to load website settings'))
       .finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { refreshSettings(); }, []);
+  useEffect(() => { document.title = `${settings.siteName} — Typing Practice`; }, [settings.siteName]);
 
-  const value = useMemo(() => ({ settings, loading, error }), [settings, loading, error]);
+  const value = useMemo(() => ({ settings, loading, error, setSettings: (value) => setSettings({ ...defaults, ...value }), refreshSettings }), [settings, loading, error]);
   return <SiteSettingsContext.Provider value={value}>{children}</SiteSettingsContext.Provider>;
 }
 

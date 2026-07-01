@@ -19,8 +19,8 @@ export const paragraphSchema = z.object({
   body: z.object({ title: z.string().trim().min(2).max(150), content: z.string().trim().min(50), language: z.enum(['English', 'Hindi']), exam: z.string().regex(/^[a-f\d]{24}$/i), difficulty: z.enum(['Easy', 'Medium', 'Hard']) })
 });
 export const paragraphListSchema = z.object({ query: z.object({ search: z.string().trim().max(100).optional(), exam: optionalId, language: z.enum(['English', 'Hindi']).optional() }) });
-export const startTestSchema = z.object({ params: idParams, body: z.object({ paragraphId: z.string().regex(/^[a-f\d]{24}$/i), testMode: z.enum(['TCS', 'Standard']).default('TCS') }) });
-export const submitSchema = z.object({ body: z.object({ testToken: z.string().min(40), paragraphId: z.string().regex(/^[a-f\d]{24}$/i), typedText: z.string().max(30000), testMode: z.enum(['TCS', 'NTA', 'Standard']).default('TCS'), totalKeystrokes: z.coerce.number().int().min(0).max(100000).default(0), backspaceCount: z.coerce.number().int().min(0).max(100000).default(0) }) });
+export const startTestSchema = z.object({ params: idParams, body: z.object({ paragraphId: z.string().regex(/^[a-f\d]{24}$/i), requestedMode: z.enum(['TCS', 'NTA', 'Custom']).optional(), timerMinutes: z.coerce.number().int().min(1).max(120).optional() }) });
+export const submitSchema = z.object({ body: z.object({ testToken: z.string().min(40), paragraphId: z.string().regex(/^[a-f\d]{24}$/i), typedText: z.string().max(30000), testMode: z.enum(['TCS', 'NTA', 'Custom', 'Standard']), totalKeystrokes: z.coerce.number().int().min(0).max(100000).default(0), backspaceCount: z.coerce.number().int().min(0).max(100000).default(0) }) });
 export const settingsSchema = z.object({ body: z.object({ siteName: z.string().trim().min(2).max(60), supportEmail: z.union([z.literal(''), z.string().trim().email()]), announcement: z.string().trim().max(240), maintenanceMode: z.boolean() }) });
 export const adminUsersSchema = z.object({ query: z.object({ search: z.string().trim().max(100).optional() }) });
 export const idSchema = z.object({ params: idParams });

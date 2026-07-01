@@ -17,7 +17,7 @@ export default function ManageExams() {
   const open = (item) => { setEditing(item || {}); setForm(item ? { ...item, category: item.category || 'Practice', organization: item.organization || 'General Practice', logo: item.logo || '/assets/exams/practice.svg', scoringRule: item.scoringRule || defaultScoringRule } : { ...blank, scoringRule: { ...defaultScoringRule } }); };
   const save = async (event) => { event.preventDefault(); try { await api(editing._id ? `/exams/${editing._id}` : '/exams', { method: editing._id ? 'PUT' : 'POST', body: JSON.stringify(form) }); setEditing(null); load(); } catch (e) { setError(e.message); } };
   const toggle = async (item) => { try { await api(`/exams/${item._id}`, { method: 'PUT', body: JSON.stringify({ ...item, scoringRule: item.scoringRule || defaultScoringRule, status: item.status === 'active' ? 'inactive' : 'active' }) }); load(); } catch (e) { setError(e.message); } };
-  const remove = async (id) => { if (!confirm('Delete this exam? This cannot be undone.')) return; try { await api(`/exams/${id}`, { method: 'DELETE' }); load(); } catch (e) { setError(e.message); } };
+  const remove = async (id) => { if (!confirm('Delete this exam and its unused paragraphs? Exams with saved results cannot be deleted.')) return; try { await api(`/exams/${id}`, { method: 'DELETE' }); setError(''); load(); } catch (e) { setError(e.message); } };
   const uploadLogo = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;

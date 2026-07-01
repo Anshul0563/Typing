@@ -3,6 +3,8 @@ import { Exam } from '../models/Exam.js';
 import { AppError } from '../utils/AppError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { signTestToken } from '../utils/jwt.js';
+import { Result } from '../models/Result.js';
+import { resolveDurationSeconds, resolveExamMode } from '../utils/examMode.js';
 
 export const listParagraphs = asyncHandler(async (req, res) => {
   const { search, exam, language } = req.validatedQuery || {};
@@ -29,8 +31,11 @@ export const updateParagraph = asyncHandler(async (req, res) => {
   res.json({ success: true, paragraph });
 });
 export const deleteParagraph = asyncHandler(async (req, res) => {
-  const paragraph = await Paragraph.findByIdAndDelete(req.params.id);
+  const paragraph = await Paragraph.findById(req.params.id);
   if (!paragraph) throw new AppError('Paragraph not found', 404);
+  const resultCount = await Result.countDocuments({ paragraph: paragraph._id });
+  if (resultCount) throw new AppError(`This paragraph has ${resultCount} saved result${resultCount === 1 ? '' : 's'} and cannot be deleted.`, 409);
+  await paragraph.deleteOne();
   res.status(204).send();
 });
 export const randomParagraph = asyncHandler(async (req, res) => {
@@ -46,9 +51,10 @@ export const startTest = asyncHandler(async (req, res) => {
   if (!exam) throw new AppError('Exam is unavailable', 404);
   const paragraph = await Paragraph.findOne({ _id: req.body.paragraphId, exam: exam._id });
   if (!paragraph) throw new AppError('Paragraph is unavailable for this exam', 404);
+  const testMode = resolveExamMode(exam, req.body.requestedMode);
   const startedAt = Date.now();
-  const durationSeconds = exam.durationMinutes * 60;
+  const durationSeconds = resolveDurationSeconds(exam, req.body.timerMinutes);
   const endsAt = startedAt + durationSeconds * 1000;
-  const testToken = signTestToken({ userId: req.user._id, examId: exam._id, paragraphId: paragraph._id, testMode: req.body.testMode, startedAt, endsAt, durationSeconds });
-  res.status(201).json({ success: true, testToken, startedAt, endsAt });
+  const testToken = signTestToken({ userId: req.user._id, examId: exam._id, paragraphId: paragraph._id, testMode, startedAt, endsAt, durationSeconds });
+  res.status(201).json({ success: true, testToken, testMode, startedAt, endsAt, durationSeconds });
 });
