@@ -53,6 +53,11 @@ const isLetter = (value) => /\p{L}/u.test(value);
 export function classifyErrors(sourceValue, typedValue, allErrorsAreFull = false) {
   const source = segmentCharacters(sourceValue.replace(/\r\n?/g, '\n'));
   const typed = segmentCharacters(typedValue.replace(/\r\n?/g, '\n'));
+  if (!typed.length && source.length) {
+    const omittedWords = Math.max(1, segmentWords(sourceValue).length);
+    const counts = { omission: omittedWords, addition: 0, spelling: 0, substitution: 0, repetition: 0, incompleteWord: 0, spacing: 0, capitalization: 0, punctuation: 0, transposition: 0, paragraphic: 0 };
+    return { counts, fullErrors: omittedWords, halfErrors: 0, weightedErrors: omittedWords, referenceParts: [{ text: source.join(''), severity: 'full', category: 'omission' }], typedParts: [] };
+  }
   const width = typed.length + 1;
   const directions = new Uint8Array((source.length + 1) * width);
   let previous = Uint32Array.from({ length: width }, (_, index) => index);

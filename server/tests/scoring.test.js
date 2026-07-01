@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { alignCharacters, alignWords, calculateResult } from '../src/utils/scoring.js';
+import { alignCharacters, alignWords, calculateResult, classifyErrors } from '../src/utils/scoring.js';
 
 function assertAlignment(source, typed, expected) {
   const result = alignCharacters(source, typed);
@@ -61,7 +61,7 @@ test('formulas remain internally consistent with errors and early submission', (
   const empty = calculateResult('five chars', '', 60);
   assert.equal(empty.grossWpm, 0);
   assert.equal(empty.netWpm, 0);
-  assert.equal(empty.accuracy, 0);
+  assert.equal(empty.accuracy, 80);
 });
 
 test('word alignment identifies wrong, omitted and extra words independently', () => {
@@ -70,7 +70,7 @@ test('word alignment identifies wrong, omitted and extra words independently', (
   assert.deepEqual(alignWords('one two three', 'one extra two three'), { typedWords: 4, referenceWords: 3, wrongWords: 0, omittedWords: 0, extraWords: 1, totalWordErrors: 1 });
 });
 
-test('selected exam scoring rule controls Net WPM without changing Gross WPM or accuracy', () => {
+test('the classified error total controls Net WPM independently of legacy display mode', () => {
   const source = 'one two three'; const typed = 'one too three';
   const wordMode = calculateResult(source, typed, 60, {}, { mode: 'standard-word', errorPenalty: 1 });
   const characterMode = calculateResult(source, typed, 60, {}, { mode: 'character', errorPenalty: 1 });
@@ -79,7 +79,7 @@ test('selected exam scoring rule controls Net WPM without changing Gross WPM or 
   assert.equal(characterMode.grossWpm, 2.6);
   assert.equal(wordMode.accuracy, characterMode.accuracy);
   assert.equal(wordMode.netWpm, 1.6);
-  assert.equal(characterMode.netWpm, 2.4);
+  assert.equal(characterMode.netWpm, 1.6);
   assert.equal(doublePenalty.netWpm, 0.6);
   for (const result of [wordMode, characterMode, doublePenalty]) assert.ok(result.netWpm <= result.grossWpm);
 });
@@ -95,12 +95,36 @@ test('result formulas cover perfect, many-error, no-input, short and long passag
   for (const [name, source, typed, seconds] of cases) {
     const result = calculateResult(source, typed, seconds, {}, { mode: 'standard-word', errorPenalty: 1 });
     const expectedGross = Math.round((((Array.from(typed).length / 5) / (seconds / 60))) * 100) / 100;
-    const expectedAccuracy = result.correctCharacters + result.totalErrors ? Math.round((result.correctCharacters / (result.correctCharacters + result.totalErrors) * 100) * 100) / 100 : 0;
+    const expectedAccuracy = result.referenceCharacters ? Math.round((Math.max(0, result.referenceCharacters - result.weightedErrors) / result.referenceCharacters * 100) * 100) / 100 : (result.typedCharacters ? 0 : 100);
     assert.equal(result.grossWpm, expectedGross, name);
     assert.equal(result.accuracy, expectedAccuracy, name);
     assert.ok(result.netWpm >= 0 && result.netWpm <= result.grossWpm, name);
     assert.equal(result.totalErrors, result.wrongCharacters + result.omittedCharacters + result.extraCharacters, name);
   }
+});
+
+test('practice mode classifies half errors and exposes the exact highlighted spans', () => {
+  const capitalization = classifyErrors('Hello', 'hello');
+  assert.equal(capitalization.halfErrors, 1);
+  assert.equal(capitalization.weightedErrors, 0.5);
+  assert.equal(capitalization.typedParts.find((part) => part.severity !== 'correct').category, 'capitalization');
+  const spacing = calculateResult('one two', 'one  two', 60);
+  assert.equal(spacing.halfErrors, 1);
+  assert.equal(spacing.fullErrors, 0);
+  assert.equal(spacing.accuracy, 92.86);
+  assert.equal(spacing.comparison.typedParts.some((part) => part.severity === 'half'), true);
+});
+
+test('SSC Stenographer mode promotes every half-category mistake to a full error', () => {
+  const practice = calculateResult('Hello, world', 'hello world', 60);
+  const ssc = calculateResult('Hello, world', 'hello world', 60, {}, { evaluationMode: 'ssc-stenographer' });
+  assert.equal(practice.fullErrors, 0);
+  assert.equal(practice.halfErrors, 2);
+  assert.equal(ssc.fullErrors, 2);
+  assert.equal(ssc.halfErrors, 0);
+  assert.equal(ssc.weightedErrors, 2);
+  assert.ok(ssc.accuracy < practice.accuracy);
+  assert.equal(ssc.comparison.typedParts.filter((part) => part.severity !== 'correct').every((part) => part.severity === 'full'), true);
 });
 
 test('alignment invariants hold across representative short strings', () => {

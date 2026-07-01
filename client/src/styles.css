@@ -104,6 +104,7 @@
   .test-header-actions { grid-column:1/-1;grid-row:2;width:100%;justify-content:flex-end;border-top:1px solid var(--line);padding-top:8px; }
   .test-header { padding-block:10px; }
 }
+
 @media (max-width:700px) {
   .instruction-settings { position:static;justify-items:start;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--line); }
   .instruction-settings>div { flex-wrap:wrap; }
@@ -257,3 +258,23 @@
   .site-footer-copyright { grid-column:1; }
   .site-footer-workspace .site-footer-inner { align-items:flex-start;flex-direction:column;gap:6px; }
 }
+
+/* Result comparison overrides are last so the two-color contract stays exact. */
+.result-page { display:flex;flex-direction:column; }
+.result-page>section,.result-page>details,.result-page>.result-actions { order:5; }
+.result-page>.result-hero-card { order:1; }
+.result-page>.result-metric-grid { order:2; }
+.result-page>.comparison-panel { order:3; }
+.result-page>.result-breakdown { order:4; }
+.result-page>.result-actions { order:6; }
+.comparison-panel { border-radius:18px;padding:22px;box-shadow:0 9px 28px rgba(27,39,66,.07); }
+.comparison-panel:first-of-type { margin-top:6px; }
+.comparison-text mark { color:#fff!important;border-radius:3px;padding:2px 1px;margin:0;box-decoration-break:clone;-webkit-box-decoration-break:clone; }
+.compare-full,.compare-omission,.compare-addition { background:#dc2626!important;color:#fff!important; }
+.compare-half { background:#2563eb!important;color:#fff!important; }
+.comparison-legend { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+.comparison-legend span { display:none; }
+.comparison-legend::before,.comparison-legend::after { white-space:pre-line;border:1px solid #e1e7f0;border-radius:11px;padding:11px 13px;line-height:1.55;color:var(--muted);background:#f8fafc; }
+.comparison-legend::before { content:'Full Error\A Omissions · Additions · Spellings · Substitutions · Repetitions · Incomplete Words';border-left:5px solid #dc2626; }
+.comparison-legend::after { content:'Half Error\A Spacing Errors · Capitalization Errors · Punctuation Errors · Transposition Errors · Paragraphic Errors';border-left:5px solid #2563eb; }
+@media (max-width:620px) { .comparison-legend { grid-template-columns:1fr; } }

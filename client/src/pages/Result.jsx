@@ -66,6 +66,7 @@ function HighlightedText({ parts }) {
 }
 
 function ResultPanel({ title, icon: Icon, children }) {
+  if (title === 'Error Breakdown' || title === 'Calculation Formulas') return null;
   return <details className="result-panel" open><summary><span><Icon />{title}</span><ChevronDown /></summary><div>{children}</div></details>;
 }
 
