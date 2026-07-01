@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, ChevronLeft, LayoutDashboard, LogOut, Menu, Moon, Search, Settings, Sun, UserRound, X, Keyboard } from 'lucide-react';
+import { BarChart3, ChevronLeft, LayoutDashboard, LogOut, Menu, Moon, Search, Settings, Sun, UserRound, X, Keyboard, TrendingUp } from 'lucide-react';
 import { Brand } from '../components/Brand.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -8,6 +8,7 @@ const studentLinks = [
   ['/dashboard', LayoutDashboard, 'Dashboard'],
   ['/dashboard#exams', Keyboard, 'Typing Tests'],
   ['/results', BarChart3, 'Results'],
+  ['/analytics', TrendingUp, 'Analytics'],
   ['/profile', UserRound, 'Profile'],
   ['/student-settings', Settings, 'Settings']
 ];
