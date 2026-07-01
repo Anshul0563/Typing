@@ -15,7 +15,11 @@ export async function connectDatabase() {
   if (mongoose.connection.readyState === 2) return mongoose.connection.asPromise();
 
   await mongoose.connect(env.mongoUri, {
-    serverSelectionTimeoutMS: 10000
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 30000,
+    maxPoolSize: 10,
+    minPoolSize: env.nodeEnv === 'production' ? 1 : 0
   });
 
   return mongoose.connection;
