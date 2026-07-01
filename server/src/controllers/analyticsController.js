@@ -15,6 +15,12 @@ const assertCanReadUserAnalytics = (req, userId) => {
   return toObjectId(userId, 'user id');
 };
 
+const boundedInteger = (value, fallback, min, max) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(Math.max(parsed, min), max);
+};
+
 export const getUserAnalytics = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const userObjectId = assertCanReadUserAnalytics(req, userId);
@@ -74,8 +80,7 @@ export const getUserAnalytics = asyncHandler(async (req, res) => {
 export const getPerformanceTrend = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const userObjectId = assertCanReadUserAnalytics(req, userId);
-  const { days = 30 } = req.query;
-  const daysLimit = Math.min(parseInt(days), 365);
+  const daysLimit = boundedInteger(req.query.days, 30, 1, 365);
 
   const fromDate = new Date();
   fromDate.setDate(fromDate.getDate() - daysLimit);
@@ -104,7 +109,7 @@ export const getPerformanceTrend = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: trend,
-    metadata: { daysRequested: parseInt(days), daysLimited: daysLimit, resultsCount: trend.length }
+    metadata: { daysRequested: req.query.days ? Number.parseInt(req.query.days, 10) : 30, daysLimited: daysLimit, resultsCount: trend.length }
   });
 });
 
@@ -272,10 +277,10 @@ export const getHourlyPattern = asyncHandler(async (req, res) => {
 export const getProgressReport = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const userObjectId = assertCanReadUserAnalytics(req, userId);
-  const { days = 30 } = req.query;
+  const days = boundedInteger(req.query.days, 30, 1, 365);
 
   const fromDate = new Date();
-  fromDate.setDate(fromDate.getDate() - parseInt(days));
+  fromDate.setDate(fromDate.getDate() - days);
 
   const allResults = await Result.find({
     user: userObjectId,
@@ -301,7 +306,7 @@ export const getProgressReport = asyncHandler(async (req, res) => {
   const avgLastThird =
     lastThird.reduce((sum, r) => sum + r.netWpm, 0) / lastThird.length;
 
-  const improvement = ((avgLastThird - avgFirstThird) / avgFirstThird) * 100;
+  const improvement = avgFirstThird > 0 ? ((avgLastThird - avgFirstThird) / avgFirstThird) * 100 : 0;
   const trend = improvement > 5 ? 'improving' : improvement < -5 ? 'declining' : 'stable';
 
   res.json({
@@ -319,9 +324,9 @@ export const getProgressReport = asyncHandler(async (req, res) => {
 export const getDetailedReport = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const userObjectId = assertCanReadUserAnalytics(req, userId);
-  const { examId, timeRange = 'all', page = 1, limit = 50 } = req.query;
-  const pageNum = Math.max(1, parseInt(page));
-  const pageSize = Math.min(parseInt(limit), 100);
+  const { examId, timeRange = 'all' } = req.query;
+  const pageNum = boundedInteger(req.query.page, 1, 1, 100000);
+  const pageSize = boundedInteger(req.query.limit, 50, 1, 100);
 
   const getDateFilter = () => {
     const now = new Date();

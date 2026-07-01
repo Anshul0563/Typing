@@ -4,13 +4,13 @@ import { Setting } from '../models/Setting.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
-import { settingsSchema } from '../validators/schemas.js';
+import { adminUsersSchema, idSchema, settingsSchema } from '../validators/schemas.js';
 
 export const adminRouter = Router();
 adminRouter.use(authenticate, authorize('admin'));
 adminRouter.get('/stats', stats);
-adminRouter.get('/users', users);
-adminRouter.patch('/users/:id/toggle', toggleUser);
+adminRouter.get('/users', validate(adminUsersSchema), users);
+adminRouter.patch('/users/:id/toggle', validate(idSchema), toggleUser);
 adminRouter.get('/settings', asyncHandler(async (_req, res) => {
   const settings = await Setting.findOne() || await Setting.create({});
   res.json({ success: true, settings });

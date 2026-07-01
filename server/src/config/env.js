@@ -13,3 +13,11 @@ export const env = {
 if (env.nodeEnv === 'production' && env.jwtSecret.includes('development')) {
   throw new Error('JWT_SECRET must be configured in production');
 }
+
+if (env.nodeEnv === 'production' && env.jwtSecret.length < 32) {
+  throw new Error('JWT_SECRET must be at least 32 characters in production');
+}
+
+if (env.nodeEnv === 'production' && /127\.0\.0\.1|localhost/.test(env.mongoUri)) {
+  throw new Error('MONGODB_URI must point to a production database');
+}

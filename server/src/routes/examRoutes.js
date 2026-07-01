@@ -11,5 +11,5 @@ examRouter.get('/', exams.listExams);
 examRouter.get('/:id/random-paragraph', validate(idSchema), randomParagraph);
 examRouter.post('/:id/start', validate(startTestSchema), startTest);
 examRouter.post('/', authorize('admin'), validate(examSchema), exams.createExam);
-examRouter.put('/:id', authorize('admin'), validate(examSchema), exams.updateExam);
+examRouter.put('/:id', authorize('admin'), validate(idSchema), validate(examSchema), exams.updateExam);
 examRouter.delete('/:id', authorize('admin'), validate(idSchema), exams.deleteExam);

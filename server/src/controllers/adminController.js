@@ -10,7 +10,7 @@ export const stats = asyncHandler(async (_req, res) => {
   res.json({ success: true, stats: { users, exams, paragraphs, tests } });
 });
 export const users = asyncHandler(async (req, res) => {
-  const search = req.query.search?.trim();
+  const search = req.validatedQuery?.search;
   const escapedSearch = search?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const filter = { role: 'user', ...(escapedSearch && { $or: [{ name: new RegExp(escapedSearch, 'i') }, { email: new RegExp(escapedSearch, 'i') }] }) };
   res.json({ success: true, users: await User.find(filter).sort({ createdAt: -1 }).limit(500) });

@@ -5,7 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { signTestToken } from '../utils/jwt.js';
 
 export const listParagraphs = asyncHandler(async (req, res) => {
-  const { search, exam, language } = req.query;
+  const { search, exam, language } = req.validatedQuery || {};
   const filter = {};
   if (exam) filter.exam = exam;
   if (language) filter.language = language;
