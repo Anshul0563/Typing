@@ -2867,10 +2867,79 @@ button {
   gap: 16px;
 }
 
+.breakdown-group-card {
+  min-width: 0;
+  overflow: hidden;
+  padding: 19px;
+  border: 1px solid #e0e7f1;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(27, 39, 66, 0.045);
+}
+.breakdown-group-card > header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #edf1f6;
+}
+.breakdown-group-card > header > span {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+}
+.breakdown-group-card > header svg { width: 18px; }
+.breakdown-group-card > header > div { min-width: 0; }
+.breakdown-group-card h3 { margin: 1px 0 4px; font-size: 15px; }
+.breakdown-group-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.breakdown-group-card > div {
+  min-width: 0;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 15px 0 0 !important;
+}
+.breakdown-chip {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid #edf1f6;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+.breakdown-chip small {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.breakdown-chip strong { flex: none; font-size: 13px; }
+.breakdown-blue > header > span { background: #edf2ff; color: #2457d6; }
+.breakdown-green > header > span { background: #e8f7f0; color: #087a55; }
+.breakdown-violet > header > span { background: #f1edff; color: #7352cf; }
+.breakdown-amber > header > span { background: #fff4df; color: #b66c08; }
+
 @media (max-width: 700px) {
   .logo-upload-button { width: 100%; }
   .result-hero-score { width: 100%; }
   .breakdown-card-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 400px) {
+  .breakdown-group-card > div { grid-template-columns: 1fr; }
 }
 
 :root[data-theme="dark"] .maintenance-page {
