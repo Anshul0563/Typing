@@ -119,9 +119,20 @@ function isIncompleteWord(sourceText, typedText) {
   return source.length > typed.length && (source.startsWith(typed) || source.endsWith(typed));
 }
 
+function strippedWordText(value) {
+  return String(value).normalize("NFC").replace(/[\p{P}\p{S}]/gu, "");
+}
+
+function hasCapitalizationDifference(sourceText, typedText) {
+  const source = strippedWordText(sourceText);
+  const typed = strippedWordText(typedText);
+  return Boolean(source && typed && source !== typed && isCaseOnlyDifference(source, typed));
+}
+
 function classifyWordPair(sourceText, typedText) {
   if (sourceText === typedText) return "correct";
   if (isCaseOnlyDifference(sourceText, typedText)) return "capitalization";
+  if (canonicalWord(sourceText) === canonicalWord(typedText)) return "punctuation";
 
   const combined = [...characters(sourceText), ...characters(typedText)];
   if (combined.length && combined.every(isPunctuation)) return "punctuation";
@@ -413,6 +424,11 @@ function createComparisonBuilder(allErrorsAreFull) {
 
   const pushPart = (parts, text, severity, category, missing = false) => {
     if (!text && !missing) return;
+    const last = parts.at(-1);
+    if (last && !last.missing && !missing && last.severity === severity && last.category === category) {
+      last.text += text;
+      return;
+    }
     parts.push({ text, severity, category, ...(missing ? { missing: true } : {}) });
   };
 
@@ -471,6 +487,15 @@ function createComparisonBuilder(allErrorsAreFull) {
       category,
       severity,
     });
+    if (category === "punctuation") {
+      const sourcePunctuation = characters(sourceWord.text).filter(isPunctuation).join("");
+      const typedPunctuation = characters(typedWord.text).filter(isPunctuation).join("");
+      if (sourcePunctuation && sourcePunctuation !== typedPunctuation) {
+        pushPart(typedReviewParts, sourcePunctuation, severity, category, true);
+      } else if (typedPunctuation && sourcePunctuation !== typedPunctuation) {
+        pushPart(referenceReviewParts, typedPunctuation, severity, category, true);
+      }
+    }
     addStats(characterStats, constrainedCharacterStats(sourceWord.text, typedWord.text));
   };
 
@@ -510,6 +535,11 @@ function createComparisonBuilder(allErrorsAreFull) {
 
     counts[category] += 1;
     pushNode({ sourceText, typedText, category, severity });
+    if (sourceText.length > typedText.length) {
+      pushPart(typedReviewParts, missingMarker(category, sourceText), severity, category, true);
+    } else if (typedText.length > sourceText.length) {
+      pushPart(referenceReviewParts, missingMarker(category, typedText), severity, category, true);
+    }
     addStats(characterStats, constrainedCharacterStats(sourceText, typedText));
   };
 
