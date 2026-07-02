@@ -103,7 +103,7 @@ test('result formulas cover perfect, many-error, no-input, short and long passag
   }
 });
 
-test('practice mode classifies half errors and exposes the exact highlighted spans', () => {
+test('non-steno mode classifies half errors and exposes the exact highlighted spans', () => {
   const capitalization = classifyErrors('Hello', 'hello');
   assert.equal(capitalization.halfErrors, 1);
   assert.equal(capitalization.weightedErrors, 0.5);
@@ -115,7 +115,7 @@ test('practice mode classifies half errors and exposes the exact highlighted spa
   assert.equal(spacing.comparison.typedParts.some((part) => part.severity === 'half'), true);
 });
 
-test('SSC Stenographer mode promotes every half-category mistake to a full error', () => {
+test('Steno mode promotes every half-category mistake to a full error', () => {
   const practice = calculateResult('Hello, world', 'hello world', 60);
   const ssc = calculateResult('Hello, world', 'hello world', 60, {}, { evaluationMode: 'ssc-stenographer' });
   assert.equal(practice.fullErrors, 0);
@@ -127,7 +127,7 @@ test('SSC Stenographer mode promotes every half-category mistake to a full error
   assert.equal(ssc.comparison.typedParts.filter((part) => part.severity !== 'correct').every((part) => part.severity === 'full'), true);
 });
 
-test('every configured half-error category receives exactly half weight in practice mode', () => {
+test('every configured half-error category receives exactly half weight in non-steno mode', () => {
   const cases = [
     ['spacing', 'one two', 'one  two'],
     ['capitalization', 'Hello', 'hello'],

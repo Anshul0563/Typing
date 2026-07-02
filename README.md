@@ -92,7 +92,7 @@ Full errors carry a weight of `1`:
 - Repetition
 - Incomplete word
 
-Half errors carry a weight of `0.5` in Practice evaluation:
+Half errors carry a weight of `0.5` in every non-steno exam evaluation:
 
 - Spacing
 - Capitalization
@@ -100,15 +100,15 @@ Half errors carry a weight of `0.5` in Practice evaluation:
 - Transposition
 - Paragraphic error
 
-SSC Stenographer English and Hindi promote every detected mistake to a full error.
+Steno/Stenographer exams promote every detected mistake to a full error.
 
 ### Formulas
 
 ```text
 Gross WPM = (Typed characters / 5) / Time in minutes
 
-Practice weighted errors = Full errors + (Half errors × 0.5)
-SSC Stenographer weighted errors = Total detected errors
+Non-steno weighted errors = Full errors + (Half errors × 0.5)
+Steno weighted errors = Total detected errors
 
 Net WPM = Gross WPM - ((Weighted errors × Penalty) / Time in minutes)
 

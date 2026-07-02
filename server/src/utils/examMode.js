@@ -17,3 +17,7 @@ export function resolveDurationSeconds(exam, requestedMinutes) {
   const minutes = Math.min(120, Math.max(1, Number(requestedMinutes) || configuredMinutes));
   return Math.round(minutes * 60);
 }
+
+export function resolveEvaluationMode(exam) {
+  return /\bsteno(?:grapher)?\b/i.test(String(exam?.name || '')) ? 'ssc-stenographer' : 'practice';
+}

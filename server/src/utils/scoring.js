@@ -51,13 +51,29 @@ const isLetter = (value) => /\p{L}/u.test(value);
  * backtracking, keeping normal exam passages comfortably bounded in memory.
  */
 export function classifyErrors(sourceValue, typedValue, allErrorsAreFull = false) {
-  const source = segmentCharacters(sourceValue.replace(/\r\n?/g, '\n'));
-  const typed = segmentCharacters(typedValue.replace(/\r\n?/g, '\n'));
-  if (!typed.length && source.length) {
+  const sourceAll = segmentCharacters(sourceValue.replace(/\r\n?/g, '\n'));
+  const typedAll = segmentCharacters(typedValue.replace(/\r\n?/g, '\n'));
+  if (!typedAll.length && sourceAll.length) {
     const omittedWords = Math.max(1, segmentWords(sourceValue).length);
     const counts = { omission: omittedWords, addition: 0, spelling: 0, substitution: 0, repetition: 0, incompleteWord: 0, spacing: 0, capitalization: 0, punctuation: 0, transposition: 0, paragraphic: 0 };
-    return { counts, fullErrors: omittedWords, halfErrors: 0, weightedErrors: omittedWords, referenceParts: [{ text: source.join(''), severity: 'full', category: 'omission' }], typedParts: [] };
+    return { counts, fullErrors: omittedWords, halfErrors: 0, weightedErrors: omittedWords, referenceParts: [{ text: sourceAll.join(''), severity: 'full', category: 'omission' }], typedParts: [] };
   }
+  const sourceWords = segmentWords(sourceValue); const typedWords = segmentWords(typedValue);
+  const frequencies = (words) => words.reduce((counts, word) => counts.set(word, (counts.get(word) || 0) + 1), new Map());
+  const sourceFrequency = frequencies(sourceWords); const typedFrequency = frequencies(typedWords);
+  const typedTokens = []; let tokenStart = -1;
+  for (let index = 0; index <= typedAll.length; index += 1) {
+    if (index < typedAll.length && !isWhitespace(typedAll[index])) { if (tokenStart < 0) tokenStart = index; }
+    else if (tokenStart >= 0) { typedTokens.push({ text: typedAll.slice(tokenStart, index).join(''), start: tokenStart }); tokenStart = -1; }
+  }
+  const repeatedToken = typedTokens.find((token, index) => index > 0 && token.text === typedTokens[index - 1].text && typedFrequency.get(token.text) > (sourceFrequency.get(token.text) || 0));
+  const repetitionStart = repeatedToken?.start;
+  let prefixLength = 0;
+  while (prefixLength < sourceAll.length && prefixLength < typedAll.length && (repetitionStart == null || prefixLength < repetitionStart) && sourceAll[prefixLength] === typedAll[prefixLength]) prefixLength += 1;
+  let suffixLength = 0;
+  while (suffixLength < sourceAll.length - prefixLength && suffixLength < typedAll.length - prefixLength && sourceAll[sourceAll.length - 1 - suffixLength] === typedAll[typedAll.length - 1 - suffixLength]) suffixLength += 1;
+  const source = sourceAll.slice(prefixLength, suffixLength ? sourceAll.length - suffixLength : sourceAll.length);
+  const typed = typedAll.slice(prefixLength, suffixLength ? typedAll.length - suffixLength : typedAll.length);
   const width = typed.length + 1;
   const directions = new Uint8Array((source.length + 1) * width);
   let previous = Uint32Array.from({ length: width }, (_, index) => index);
@@ -83,6 +99,8 @@ export function classifyErrors(sourceValue, typedValue, allErrorsAreFull = false
     else { operations.push({ source: '', typed: typed[--j] }); }
   }
   operations.reverse();
+  if (prefixLength) operations.unshift(...sourceAll.slice(0, prefixLength).map((character) => ({ source: character, typed: character, equal: true })));
+  if (suffixLength) operations.push(...sourceAll.slice(sourceAll.length - suffixLength).map((character) => ({ source: character, typed: character, equal: true })));
 
   const counts = { omission: 0, addition: 0, spelling: 0, substitution: 0, repetition: 0, incompleteWord: 0, spacing: 0, capitalization: 0, punctuation: 0, transposition: 0, paragraphic: 0 };
   const classified = [];

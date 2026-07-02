@@ -6,15 +6,19 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { calculateResult } from '../utils/scoring.js';
 import { verifyTestToken } from '../utils/jwt.js';
 import { calculateElapsedSeconds } from '../utils/testTiming.js';
+import { resolveEvaluationMode } from '../utils/examMode.js';
 
 const modeScoringRules = {
   TCS: { mode: 'character', errorPenalty: 1 },
-  // NTA is retained for historical/future CBT records; new typing sessions cannot start in NTA mode.
+  // Mode labels describe the interface; classified full/half errors remain the scoring source of truth.
   NTA: { mode: 'standard-word', errorPenalty: 1 },
   Custom: { mode: 'standard-word', errorPenalty: 1 }
 };
 
-const scoringRuleForMode = (exam, testMode) => modeScoringRules[testMode] || exam.scoringRule;
+const scoringRuleForMode = (exam, testMode) => ({
+  ...(modeScoringRules[testMode] || exam.scoringRule),
+  errorPenalty: exam.scoringRule?.errorPenalty ?? modeScoringRules[testMode]?.errorPenalty ?? 1
+});
 
 export const submitResult = asyncHandler(async (req, res) => {
   const paragraph = await Paragraph.findById(req.body.paragraphId);
@@ -29,10 +33,16 @@ export const submitResult = asyncHandler(async (req, res) => {
   const elapsedSeconds = calculateElapsedSeconds(session.startedAt, Date.now(), (session.endsAt - session.startedAt) / 1000);
   const typedLength = Array.from(req.body.typedText.normalize('NFC')).length;
   const referenceLength = Array.from(paragraph.content.normalize('NFC')).length;
+  if (referenceLength > 5000) throw new AppError('This paragraph is too large to evaluate safely. Ask an administrator to shorten it.', 422);
   if (typedLength > referenceLength + 1000) throw new AppError('Typed text exceeds the permitted test length', 400);
-  const isSscStenographer = /^SSC Stenographer\s*(?:\((?:English|Hindi)\)|(?:English|Hindi))$/i.test(exam.name.trim());
-  const metrics = calculateResult(paragraph.content, req.body.typedText, elapsedSeconds, req.body, { ...scoringRuleForMode(exam, req.body.testMode), evaluationMode: isSscStenographer ? 'ssc-stenographer' : 'practice' });
-  const result = await Result.create({ testSessionId: session.jti, user: req.user._id, exam: exam._id, paragraph: paragraph._id, typedText: req.body.typedText, testMode: req.body.testMode, ...metrics });
+  const metrics = calculateResult(paragraph.content, req.body.typedText, elapsedSeconds, req.body, { ...scoringRuleForMode(exam, req.body.testMode), evaluationMode: resolveEvaluationMode(exam) });
+  let result;
+  try { result = await Result.create({ testSessionId: session.jti, user: req.user._id, exam: exam._id, paragraph: paragraph._id, typedText: req.body.typedText, testMode: req.body.testMode, ...metrics }); }
+  catch (error) {
+    if (error?.code !== 11000) throw error;
+    result = await Result.findOne({ testSessionId: session.jti });
+    if (!result) throw error;
+  }
   res.status(201).json({ success: true, result: { ...result.toObject(), exam: { _id: exam._id, name: exam.name }, paragraph: { _id: paragraph._id, title: paragraph.title, content: paragraph.content } } });
 });
 export const getResult = asyncHandler(async (req, res) => {
