@@ -478,6 +478,9 @@ function createComparisonBuilder(allErrorsAreFull) {
     const severity = severityFor(category, allErrorsAreFull);
     if (category !== "correct") {
       counts[category] += 1;
+      if (category === "punctuation" && hasCapitalizationDifference(sourceWord.text, typedWord.text)) {
+        counts.capitalization += 1;
+      }
       wordStats.wrongWords += 1;
     }
 
