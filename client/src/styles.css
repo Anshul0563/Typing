@@ -4826,3 +4826,327 @@ button {
   .student-topbar { background: var(--student-surface); }
   .admin-topbar { background: #fff; }
 }
+
+/* Admin desktop layout polish */
+@media (min-width: 1101px) {
+  .admin-main {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 42px 42px 80px;
+  }
+
+  .admin-topbar {
+    padding-inline: 42px;
+  }
+
+  .admin-page-heading,
+  .admin-main > .page-heading {
+    min-height: 70px;
+    margin-bottom: 30px;
+    align-items: flex-start;
+  }
+
+  .admin-page-heading h1,
+  .admin-main > .page-heading h1 {
+    margin: 6px 0;
+    font-size: 32px;
+    line-height: 1.15;
+  }
+
+  .admin-page-heading p,
+  .admin-main > .page-heading p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .admin-page-heading > .button,
+  .admin-main > .page-heading > .button {
+    min-height: 42px;
+  }
+
+  .admin-overview-stats {
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+
+  .admin-overview-stats article {
+    min-height: 128px;
+    padding: 22px;
+    border-radius: 16px;
+    gap: 16px;
+  }
+
+  .admin-overview-stats article > span {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+  }
+
+  .admin-overview-stats p { font-size: 11px; }
+  .admin-overview-stats strong { font-size: 28px; }
+
+  .admin-overview-grid {
+    gap: 20px;
+  }
+
+  .admin-panel-card {
+    min-height: 260px;
+    padding: 27px;
+    border-radius: 17px;
+  }
+
+  .admin-panel-title h2 { font-size: 19px; }
+  .admin-panel-card > p { font-size: 12px; }
+  .admin-action-list a { min-height: 52px; }
+  .admin-action-list b { font-size: 12px; }
+
+  .admin-toolbar,
+  .admin-main .filters {
+    margin-bottom: 20px;
+  }
+
+  .admin-main .filters {
+    padding: 13px;
+  }
+
+  .admin-search {
+    width: min(100%, 500px);
+    height: 46px;
+  }
+
+  .admin-user-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 13px;
+  }
+
+  .admin-user-grid article {
+    min-width: 0;
+    min-height: 94px;
+    padding: 16px 17px;
+    border-radius: 14px;
+    box-shadow: 0 5px 16px rgba(27, 39, 66, 0.025);
+  }
+
+  .admin-user-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .admin-user-info { min-width: 0; }
+  .admin-user-info strong { font-size: 13px; }
+  .admin-user-info span {
+    max-width: 230px;
+    overflow: hidden;
+    font-size: 11px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .admin-settings-card {
+    width: min(100%, 860px);
+    max-width: 860px;
+    border-radius: 17px;
+  }
+
+  .admin-settings-intro,
+  .admin-settings-fields,
+  .admin-settings-actions {
+    padding-inline: 28px;
+  }
+
+  .admin-settings-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 19px 20px;
+  }
+
+  .admin-settings-fields > label,
+  .admin-settings-fields > .admin-field-section,
+  .admin-settings-fields > .admin-maintenance-toggle {
+    min-width: 0;
+  }
+
+  .admin-settings-fields > .admin-field-section,
+  .admin-settings-fields > label:has(textarea),
+  .admin-settings-fields > .admin-maintenance-toggle {
+    grid-column: 1 / -1;
+  }
+
+  .admin-main .table-wrap {
+    border-radius: 15px;
+    overflow: hidden;
+  }
+
+  .admin-main .table-wrap th {
+    height: 46px;
+    padding-inline: 18px;
+  }
+
+  .admin-main .table-wrap td {
+    padding: 17px 18px;
+  }
+
+  .admin-exam-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1100px) {
+  .admin-main {
+    width: 100%;
+    max-width: 1000px;
+    padding: 34px 28px 70px;
+  }
+
+  .admin-exam-grid,
+  .admin-overview-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Client paragraph library uses the full available canvas */
+.paragraph-selection-page {
+  width: 100%;
+  align-items: stretch;
+}
+
+.paragraph-selection-page .paragraph-selection-card {
+  width: 100%;
+  max-width: none;
+  margin-inline: auto;
+}
+
+.admin-main.admin-main-full {
+  width: 100%;
+  max-width: none;
+}
+
+.admin-exam-toolbar {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e1e6ed;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.admin-exam-toolbar .admin-search {
+  width: min(100%, 560px);
+  border-color: transparent;
+  background: #f5f7fa;
+}
+
+.admin-exam-toolbar > span {
+  flex: none;
+  color: #7a8698;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-settings-layout {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(230px, 0.34fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.admin-settings-layout .admin-settings-card {
+  width: 100%;
+  max-width: none;
+}
+
+.admin-settings-preview {
+  position: sticky;
+  top: 100px;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid #e1e6ed;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #fff, #f7f9fe);
+  box-shadow: 0 7px 24px rgba(27, 39, 66, 0.045);
+}
+
+.admin-settings-preview > span:first-child {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 18px;
+  border-radius: 13px;
+  background: #eaf0ff;
+  color: #2457d6;
+  display: grid;
+  place-items: center;
+}
+
+.admin-settings-preview svg { width: 21px; }
+.admin-settings-preview > small {
+  color: #2457d6;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.admin-settings-preview h2 {
+  margin: 7px 0 10px;
+  color: #1b2535;
+  font-size: 21px;
+  overflow-wrap: break-word;
+}
+.admin-settings-preview > p {
+  min-height: 56px;
+  margin: 0 0 20px;
+  color: #738095;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+.admin-settings-preview > div {
+  padding-top: 16px;
+  border-top: 1px solid #e5eaf1;
+  display: grid;
+  justify-items: start;
+  gap: 9px;
+}
+.admin-settings-preview > div > small {
+  max-width: 100%;
+  overflow: hidden;
+  color: #7d899a;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-settings-actions {
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .admin-settings-layout {
+    grid-template-columns: 1fr;
+  }
+  .admin-settings-preview {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-exam-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .admin-exam-toolbar .admin-search {
+    width: 100%;
+  }
+  .admin-settings-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+  .admin-settings-actions .button {
+    width: 100%;
+  }
+}
