@@ -302,3 +302,43 @@ test('backspace and highlight preference combinations cannot alter scoring rules
     }
   }
 });
+
+test('local capitalization aligns the current word and never searches future words', () => {
+  const result = classifyErrors('responsibility. A candidate a', 'responsibility. a candidate a');
+  assert.equal(result.counts.capitalization, 1);
+  assert.equal(result.counts.omission, 0);
+  assert.equal(result.counts.addition, 0);
+  const capitalizedPair = result.alignmentTree.find((node) => node.category === 'capitalization');
+  assert.deepEqual(capitalizedPair, {
+    sourceText: 'A',
+    typedText: 'a',
+    category: 'capitalization',
+    severity: 'half'
+  });
+});
+
+test('word spelling errors highlight the whole word in production parts', () => {
+  const result = classifyErrors('strong', 'strog');
+  assert.equal(result.counts.spelling, 1);
+  assert.deepEqual(result.referenceParts, [{ text: 'strong', severity: 'full', category: 'spelling' }]);
+  assert.deepEqual(result.typedParts, [{ text: 'strog', severity: 'full', category: 'spelling' }]);
+});
+
+test('production parts never contain internal placeholder glyphs', () => {
+  const cases = [
+    ['one two', 'onetwo'],
+    ['Hello, world', 'Hello world'],
+    ['one two three', 'one three'],
+    ['one two', 'one extra two'],
+    ['one\ntwo', 'one two']
+  ];
+  for (const [source, typed] of cases) {
+    const result = classifyErrors(source, typed);
+    const referenceText = result.referenceParts.map((part) => part.text).join('');
+    const typedText = result.typedParts.map((part) => part.text).join('');
+    assert.equal(/[∅␠↵]/u.test(referenceText), false, `${source} / ${typed} reference`);
+    assert.equal(/[∅␠↵]/u.test(typedText), false, `${source} / ${typed} typed`);
+    assert.equal(referenceText, source.normalize('NFC').replace(/\r\n?/g, '\n'));
+    assert.equal(typedText, typed.normalize('NFC').replace(/\r\n?/g, '\n'));
+  }
+});

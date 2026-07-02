@@ -74,10 +74,6 @@ function spanText(words, start, end) {
   return words.slice(start, end).map((word) => word.separator + word.text).join("");
 }
 
-function spanWordText(words, start, end) {
-  return words.slice(start, end).map((word) => word.text).join("");
-}
-
 function spanCanonical(words, start, end) {
   return words.slice(start, end).map((word) => word.canonical).join("");
 }
