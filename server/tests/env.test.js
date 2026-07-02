@@ -10,5 +10,5 @@ test('numeric JWT expiry values are interpreted as days', () => {
 test('JWT expiry values with explicit units remain unchanged', () => {
   assert.equal(normalizeJwtExpiry('12h'), '12h');
   assert.equal(normalizeJwtExpiry('7d'), '7d');
-  assert.equal(normalizeJwtExpiry(''), '7d');
+  assert.equal(normalizeJwtExpiry(''), '1d');
 });

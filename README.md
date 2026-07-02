@@ -219,7 +219,7 @@ The default catalogue is created idempotently during server startup. Existing ad
 | `NODE_ENV` | Yes | Use `production` in production |
 | `MONGODB_URI` | Yes | MongoDB connection string |
 | `JWT_SECRET` | Yes | Random secret of at least 32 characters |
-| `JWT_EXPIRES_IN` | No | Login-token lifetime; defaults to `7d` |
+| `JWT_EXPIRES_IN` | No | Login-token lifetime; defaults to `1d` |
 | `CLIENT_URL` | Yes | Exact allowed frontend origin; comma-separated exact origins are supported |
 | `ADMIN_EMAIL` | Recommended | Startup-managed administrator email |
 | `ADMIN_PASSWORD` | Recommended | Startup-managed administrator password |

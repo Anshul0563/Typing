@@ -1,11 +1,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-export const normalizeJwtExpiry = (value = '7d') => {
+export const normalizeJwtExpiry = (value = '1d') => {
   const expiry = String(value).trim();
   // jsonwebtoken interprets a numeric string as milliseconds. Environment
   // values such as JWT_EXPIRES_IN=7 are conventionally intended as days.
-  return /^\d+$/.test(expiry) ? `${expiry}d` : expiry || '7d';
+  return /^\d+$/.test(expiry) ? `${expiry}d` : expiry || '1d';
 };
 
 export const env = {

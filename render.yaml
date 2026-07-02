@@ -13,7 +13,7 @@ services:
       - key: NODE_VERSION
         value: "22"
       - key: JWT_EXPIRES_IN
-        value: 7d
+        value: 1d
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET
