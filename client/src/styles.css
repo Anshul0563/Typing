@@ -5252,3 +5252,46 @@ button {
     width: 100%;
   }
 }
+
+/* Keep result-history headers and row values on the same desktop tracks. */
+@media (min-width: 761px) {
+  .results-list-head,
+  .results-row {
+    grid-template-columns:
+      minmax(260px, 2fr)
+      minmax(125px, 1fr)
+      minmax(90px, 0.7fr)
+      minmax(85px, 0.7fr)
+      30px
+      46px;
+    gap: 15px;
+    padding: 13px 18px;
+  }
+
+  .results-row-link {
+    grid-column: 1 / 6;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: center;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .results-list-head > span:nth-child(3),
+  .results-list-head > span:nth-child(4),
+  .results-row-link > b {
+    text-align: center;
+  }
+
+  .results-list-head > span:nth-child(5),
+  .results-list-head > span:nth-child(6),
+  .results-row-link > svg,
+  .result-delete-button {
+    justify-self: center;
+  }
+
+  .results-row-link > span:nth-child(2) {
+    white-space: nowrap;
+  }
+}
