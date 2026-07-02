@@ -43,6 +43,14 @@ export const getResult = asyncHandler(async (req, res) => {
   res.json({ success: true, result });
 });
 
+export const deleteResult = asyncHandler(async (req, res) => {
+  const filter = { _id: req.params.id };
+  if (req.user.role !== 'admin') filter.user = req.user._id;
+  const result = await Result.findOneAndDelete(filter);
+  if (!result) throw new AppError('Result not found', 404);
+  res.status(204).send();
+});
+
 export const listMyResults = asyncHandler(async (req, res) => {
   const [results, aggregates] = await Promise.all([
     Result.find({ user: req.user._id }).select('-typedText').populate('exam', 'name language').populate('paragraph', 'title').sort({ createdAt: -1 }).limit(100),

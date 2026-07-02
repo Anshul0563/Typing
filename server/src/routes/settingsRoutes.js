@@ -11,6 +11,11 @@ settingsRouter.get('/', asyncHandler(async (_req, res) => {
     settings: {
       siteName: settings.siteName,
       supportEmail: settings.supportEmail,
+      contactPhone: settings.contactPhone,
+      addressUrl: settings.addressUrl,
+      instagramUrl: settings.instagramUrl,
+      whatsappUrl: settings.whatsappUrl,
+      youtubeUrl: settings.youtubeUrl,
       announcement: settings.announcement,
       maintenanceMode: settings.maintenanceMode
     }

@@ -16,7 +16,7 @@ adminRouter.get('/settings', asyncHandler(async (_req, res) => {
   res.json({ success: true, settings });
 }));
 adminRouter.put('/settings', validate(settingsSchema), asyncHandler(async (req, res) => {
-  const allowed = (({ siteName, supportEmail, announcement, maintenanceMode }) => ({ siteName, supportEmail, announcement, maintenanceMode }))(req.body);
+  const allowed = (({ siteName, supportEmail, contactPhone, addressUrl, instagramUrl, whatsappUrl, youtubeUrl, announcement, maintenanceMode }) => ({ siteName, supportEmail, contactPhone, addressUrl, instagramUrl, whatsappUrl, youtubeUrl, announcement, maintenanceMode }))(req.body);
   const settings = await Setting.findOneAndUpdate({}, allowed, { new: true, upsert: true, runValidators: true });
   res.json({ success: true, settings });
 }));

@@ -60,10 +60,27 @@ export const randomParagraph = asyncHandler(async (req, res) => {
   res.json({ success: true, exam, paragraph });
 });
 
+export const listExamParagraphs = asyncHandler(async (req, res) => {
+  const exam = await Exam.findOne({ _id: req.params.id, status: 'active' }).select('name organization language category durationMinutes logo description').lean();
+  if (!exam) throw new AppError('Exam is unavailable', 404);
+  const paragraphs = await Paragraph.aggregate([
+    { $match: { exam: exam._id, language: exam.language } },
+    { $addFields: { difficultyOrder: { $switch: { branches: [
+      { case: { $eq: ['$difficulty', 'Easy'] }, then: 1 },
+      { case: { $eq: ['$difficulty', 'Medium'] }, then: 2 },
+      { case: { $eq: ['$difficulty', 'Hard'] }, then: 3 }
+    ], default: 4 } } } },
+    { $sort: { difficultyOrder: 1, createdAt: -1, title: 1 } },
+    { $project: { title: 1, language: 1, difficulty: 1, characterCount: { $strLenCP: '$content' } } }
+  ]);
+  res.json({ success: true, exam, paragraphs });
+});
+
 export const launchTest = asyncHandler(async (req, res) => {
   const exam = await Exam.findOne({ _id: req.params.id, status: 'active' }).lean();
   if (!exam) throw new AppError('Exam is unavailable', 404);
-  const paragraph = await sampleParagraph(exam);
+  const paragraph = await Paragraph.findOne({ _id: req.body.paragraphId, exam: exam._id, language: exam.language }).select('title content language difficulty').lean();
+  if (!paragraph) throw new AppError('Paragraph is unavailable for this exam', 404);
   if (exam.category === 'Practice') return res.json({ success: true, requiresSettings: true, exam, paragraph });
   const session = createTestSession(req.user, exam, paragraph);
   res.status(201).json({ success: true, requiresSettings: false, exam, paragraph, ...session });
