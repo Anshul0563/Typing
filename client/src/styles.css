@@ -86,6 +86,33 @@
 .site-footer nav a:hover { color:var(--brand); }
 .site-footer-bottom { border-top:1px solid var(--line);margin-top:30px;padding-top:17px;display:flex;align-items:center;justify-content:space-between;gap:20px;font-size:10px; }
 .site-footer-bottom p { margin:0; }
+
+/* Windows app download */
+.download-page { min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#f7faff 0,#fff 520px); }
+.download-page>.public-nav { width:100%;max-width:none;margin:0;background:rgba(255,255,255,.9);border-bottom:1px solid var(--line);padding-inline:max(28px,calc((100vw - 1440px)/2));backdrop-filter:blur(12px); }
+.download-page>.site-footer { margin-top:auto; }
+.download-main { width:min(1120px,calc(100% - 40px));margin:0 auto;padding:82px 0 90px; }
+.download-hero { max-width:760px;margin:0 auto 44px;text-align:center; }
+.download-hero>span { display:inline-flex;align-items:center;gap:8px;color:var(--brand);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase; }
+.download-hero>span svg { width:17px; }
+.download-hero h1 { margin:18px 0 15px;font-size:clamp(38px,6vw,64px);line-height:1.02;letter-spacing:-.055em; }
+.download-hero p { max-width:680px;margin:auto;color:var(--muted);font-size:15px;line-height:1.75; }
+.download-card { display:grid;grid-template-columns:220px minmax(0,1fr);align-items:center;gap:42px;max-width:900px;margin:auto;padding:42px;border:1px solid #dfe7f3;border-radius:28px;background:#fff;box-shadow:0 24px 70px rgba(35,73,135,.11); }
+.download-app-icon { width:176px;aspect-ratio:1;display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:25px;border-radius:35px;background:linear-gradient(145deg,#eef5ff,#dbeaff);box-shadow:inset 0 0 0 1px #cdddf4; }
+.download-app-icon span { background:linear-gradient(145deg,#3679eb,#1552bd); }
+.download-app-icon span:first-child { border-radius:8px 2px 2px 2px; }.download-app-icon span:nth-child(2) { border-radius:2px 8px 2px 2px; }.download-app-icon span:nth-child(3) { border-radius:2px 2px 2px 8px; }.download-app-icon span:last-child { border-radius:2px 2px 8px 2px; }
+.download-release-info>small { color:var(--brand);font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase; }
+.download-release-info h2 { margin:8px 0 12px;font-size:30px;letter-spacing:-.035em; }
+.download-release-info>p { margin:0 0 20px;color:var(--muted);font-size:13px;line-height:1.65; }
+.download-meta { display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:24px;color:#69778b;font-size:11px; }
+.download-meta span { display:inline-flex;align-items:center;gap:5px;padding:7px 10px;border-radius:999px;background:#f3f6fa; }.download-meta svg { width:13px; }
+.download-button { max-width:100%;height:auto;min-height:46px;padding-block:11px;text-align:center;overflow-wrap:anywhere; }
+.download-actions { display:flex;align-items:center;flex-wrap:wrap;gap:10px; }
+.download-loading { display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px; }.download-loading svg { width:17px;animation:download-spin 1s linear infinite; }
+@keyframes download-spin { to { transform:rotate(360deg); } }
+.download-features { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:900px;margin:22px auto 0; }
+.download-features article { display:flex;align-items:flex-start;gap:12px;padding:19px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.76); }.download-features svg { flex:0 0 auto;width:19px;color:var(--brand); }.download-features strong { display:block;font-size:12px; }.download-features p { margin:6px 0 0;color:var(--muted);font-size:10px;line-height:1.55; }
+@media (max-width:700px) { .download-page>.public-nav { padding-inline:16px; }.download-main { width:min(100% - 24px,1120px);padding:55px 0 65px; }.download-hero { margin-bottom:30px; }.download-hero h1 { font-size:39px; }.download-card { grid-template-columns:1fr;gap:25px;padding:27px 20px;border-radius:22px;text-align:center; }.download-app-icon { width:130px;margin:auto;padding:19px;border-radius:27px; }.download-meta,.download-actions { justify-content:center; }.download-release-info .button { justify-content:center;width:100%; }.download-features { grid-template-columns:1fr; }.download-features article { text-align:left; } }
 .student-workspace { min-height:100vh;display:flex;flex-direction:column; }
 .student-main { flex:1; }
 .site-footer-workspace { background:var(--student-surface);border-color:var(--student-border);color:var(--student-muted); }

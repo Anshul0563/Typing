@@ -10,6 +10,7 @@ const Disclaimer = lazy(() => import('./pages/InfoPages.jsx').then((module) => (
 const Privacy = lazy(() => import('./pages/InfoPages.jsx').then((module) => ({ default: module.Privacy })));
 const Terms = lazy(() => import('./pages/InfoPages.jsx').then((module) => ({ default: module.Terms })));
 const Contact = lazy(() => import('./pages/Contact.jsx'));
+const WindowsDownload = lazy(() => import('./pages/WindowsDownload.jsx'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'));
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
@@ -26,7 +27,7 @@ const ManageUsers = lazy(() => import('./pages/admin/ManageUsers.jsx'));
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage.jsx'));
 const AnalyticsDashboard = lazy(() => import('./pages/AnalyticsDashboard.jsx'));
 export default function App() { return <Suspense fallback={<Loader label="Loading page…" />}><Routes>
-  <Route path="/" element={<Home />} /><Route path="/about" element={<About />} /><Route path="/contact" element={<Contact />} /><Route path="/terms" element={<Terms />} /><Route path="/privacy" element={<Privacy />} /><Route path="/disclaimer" element={<Disclaimer />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/admin/login" element={<AuthPage mode="login" adminOnly />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
+  <Route path="/" element={<Home />} /><Route path="/about" element={<About />} /><Route path="/contact" element={<Contact />} /><Route path="/download" element={<WindowsDownload />} /><Route path="/terms" element={<Terms />} /><Route path="/privacy" element={<Privacy />} /><Route path="/disclaimer" element={<Disclaimer />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/admin/login" element={<AuthPage mode="login" adminOnly />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
   <Route element={<ProtectedRoute />}><Route element={<AppLayout />}><Route path="/dashboard" element={<Dashboard />} /><Route path="/exams" element={<Exams />} /><Route path="/results" element={<ResultsHistory />} /><Route path="/analytics" element={<AnalyticsDashboard />} /><Route path="/profile" element={<Profile />} /><Route path="/student-settings" element={<StudentSettings />} /><Route path="/result/:id" element={<Result />} /></Route><Route path="/test/:examId" element={<TypingTest />} /></Route>
   <Route element={<ProtectedRoute admin />}><Route path="/admin" element={<AdminLayout />}><Route index element={<AdminOverview />} /><Route path="exams" element={<ManageExams />} /><Route path="paragraphs" element={<ManageParagraphs />} /><Route path="users" element={<ManageUsers />} /><Route path="settings" element={<SettingsPage />} /></Route></Route>
   <Route path="*" element={<main className="empty-state"><h1>Page not found</h1><a href="/">Return home</a></main>} />
