@@ -50,7 +50,7 @@ const isLetter = (value) => /\p{L}/u.test(value);
  * Costs are computed with rolling rows; only one byte per cell is retained for
  * backtracking, keeping normal exam passages comfortably bounded in memory.
  */
-export function classifyErrors(sourceValue, typedValue, allErrorsAreFull = false) {
+function classifyErrorsLegacy(sourceValue, typedValue, allErrorsAreFull = false) {
   const sourceAll = segmentCharacters(sourceValue.replace(/\r\n?/g, '\n'));
   const typedAll = segmentCharacters(typedValue.replace(/\r\n?/g, '\n'));
   if (!typedAll.length && sourceAll.length) {
@@ -161,6 +161,164 @@ export function classifyErrors(sourceValue, typedValue, allErrorsAreFull = false
   return { counts, fullErrors: classifiedTotal - halfErrors, halfErrors, weightedErrors: classifiedTotal - halfErrors * 0.5, referenceParts: merge('source'), typedParts: merge('typed'), typedReviewParts };
 }
 
+const errorCategories = Object.freeze({ omission: 0, addition: 0, spelling: 0, substitution: 0, repetition: 0, incompleteWord: 0, spacing: 0, capitalization: 0, punctuation: 0, transposition: 0, paragraphic: 0 });
+const halfErrorCategories = new Set(['spacing', 'capitalization', 'punctuation', 'transposition', 'paragraphic']);
+
+function tokenizeForAlignment(value) {
+  const text = String(value ?? '').normalize('NFC').replace(/\r\n?/g, '\n');
+  const words = []; let cursor = 0; let pending = '';
+  for (const match of text.matchAll(/\s+|\S+/gu)) {
+    if (/^\s+$/u.test(match[0])) pending += match[0];
+    else { words.push({ text: match[0], before: pending }); pending = ''; }
+    cursor = (match.index || 0) + match[0].length;
+  }
+  return { text, words, trailing: pending || text.slice(cursor) };
+}
+
+function characterDistance(leftValue, rightValue) {
+  const left = segmentCharacters(leftValue); const right = segmentCharacters(rightValue);
+  let previous = Uint16Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= left.length; i += 1) {
+    const current = new Uint16Array(right.length + 1); current[0] = i;
+    for (let j = 1; j <= right.length; j += 1) current[j] = left[i - 1] === right[j - 1] ? previous[j - 1] : 1 + Math.min(previous[j - 1], previous[j], current[j - 1]);
+    previous = current;
+  }
+  return previous[right.length];
+}
+
+function wordSubstitutionCost(left, right) {
+  if (left === right) return 0;
+  const maximum = Math.max(segmentCharacters(left).length, segmentCharacters(right).length, 1);
+  return Math.max(0.2, Math.min(1.25, characterDistance(left, right) / maximum));
+}
+
+function alignWordTokens(sourceWords, typedWords) {
+  const height = sourceWords.length + 1; const width = typedWords.length + 1;
+  const directions = new Uint8Array(height * width);
+  let twoBack = new Float64Array(width); let previous = Float64Array.from({ length: width }, (_, index) => index);
+  for (let j = 1; j < width; j += 1) directions[j] = 3;
+  for (let i = 1; i < height; i += 1) {
+    const current = new Float64Array(width); current[0] = i; directions[i * width] = 2;
+    for (let j = 1; j < width; j += 1) {
+      const source = sourceWords[i - 1].text; const typed = typedWords[j - 1].text;
+      let best = previous[j - 1] + wordSubstitutionCost(source, typed); let direction = 1;
+      const deletion = previous[j] + 1;
+      if (deletion < best - 1e-9) { best = deletion; direction = 2; }
+      const insertion = current[j - 1] + 1;
+      if (insertion < best - 1e-9) { best = insertion; direction = 3; }
+      if (i > 1 && j > 1 && sourceWords[i - 2].text === typed && source === typedWords[j - 2].text) {
+        const transposition = twoBack[j - 2] + 1;
+        if (transposition <= best + 1e-9) { best = transposition; direction = 4; }
+      }
+      current[j] = best; directions[i * width + j] = direction;
+    }
+    twoBack = previous; previous = current;
+  }
+  const operations = []; let i = sourceWords.length; let j = typedWords.length;
+  while (i || j) {
+    const direction = directions[i * width + j];
+    if (direction === 4) { operations.push({ type: 'transpose', source: [sourceWords[i - 2], sourceWords[i - 1]], typed: [typedWords[j - 2], typedWords[j - 1]] }); i -= 2; j -= 2; }
+    else if (direction === 1 && i && j) { operations.push({ type: 'pair', source: sourceWords[--i], typed: typedWords[--j] }); }
+    else if ((direction === 2 || !j) && i) { operations.push({ type: 'delete', source: sourceWords[--i] }); }
+    else { operations.push({ type: 'insert', typed: typedWords[--j] }); }
+  }
+  return operations.reverse();
+}
+
+function alignTokenCharacters(sourceValue, typedValue) {
+  const source = segmentCharacters(sourceValue); const typed = segmentCharacters(typedValue);
+  const width = typed.length + 1; const costs = new Uint16Array((source.length + 1) * width); const directions = new Uint8Array(costs.length);
+  for (let i = 1; i <= source.length; i += 1) { costs[i * width] = i; directions[i * width] = 2; }
+  for (let j = 1; j <= typed.length; j += 1) { costs[j] = j; directions[j] = 3; }
+  for (let i = 1; i <= source.length; i += 1) for (let j = 1; j <= typed.length; j += 1) {
+    const index = i * width + j;
+    if (source[i - 1] === typed[j - 1]) { costs[index] = costs[(i - 1) * width + j - 1]; directions[index] = 1; continue; }
+    let best = costs[(i - 1) * width + j - 1] + 1; let direction = 4;
+    const deletion = costs[(i - 1) * width + j] + 1; if (deletion < best) { best = deletion; direction = 2; }
+    const insertion = costs[i * width + j - 1] + 1; if (insertion < best) { best = insertion; direction = 3; }
+    if (i > 1 && j > 1 && source[i - 2] === typed[j - 1] && source[i - 1] === typed[j - 2]) {
+      const transposition = costs[(i - 2) * width + j - 2] + 1; if (transposition <= best) { best = transposition; direction = 5; }
+    }
+    costs[index] = best; directions[index] = direction;
+  }
+  const operations = []; let i = source.length; let j = typed.length;
+  while (i || j) {
+    const direction = directions[i * width + j];
+    if (direction === 1) operations.push({ source: source[--i], typed: typed[--j], equal: true });
+    else if (direction === 5) { operations.push({ source: source.slice(i - 2, i).join(''), typed: typed.slice(j - 2, j).join(''), transposed: true }); i -= 2; j -= 2; }
+    else if (direction === 4 && i && j) operations.push({ source: source[--i], typed: typed[--j] });
+    else if ((direction === 2 || !j) && i) operations.push({ source: source[--i], typed: '' });
+    else operations.push({ source: '', typed: typed[--j] });
+  }
+  return operations.reverse();
+}
+
+function missingMarker(category, text) {
+  if (category === 'spacing') return '␠';
+  if (category === 'paragraphic') return '↵';
+  if (category === 'punctuation') return text || '·';
+  return '∅';
+}
+
+export function classifyErrors(sourceValue, typedValue, allErrorsAreFull = false) {
+  const source = tokenizeForAlignment(sourceValue); const typed = tokenizeForAlignment(typedValue);
+  const counts = { ...errorCategories }; const referenceParts = []; const typedParts = []; const referenceReviewParts = []; const typedReviewParts = [];
+  const severityFor = (category) => !allErrorsAreFull && halfErrorCategories.has(category) ? 'half' : 'full';
+  const push = (parts, text, severity = 'correct', category = 'correct', missing = false) => {
+    if (!text) return;
+    const previous = parts.at(-1);
+    if (!missing && !previous?.missing && previous?.severity === severity && previous?.category === category) previous.text += text;
+    else parts.push({ text, severity, category, ...(missing && { missing: true }) });
+  };
+  const record = (category, sourceText, typedText, amount = 1) => {
+    counts[category] += amount; const severity = severityFor(category);
+    if (sourceText) { push(referenceParts, sourceText, severity, category); push(referenceReviewParts, sourceText, severity, category); }
+    else push(referenceReviewParts, missingMarker(category, typedText), severity, category, true);
+    if (typedText) { push(typedParts, typedText, severity, category); push(typedReviewParts, typedText, severity, category); }
+    else push(typedReviewParts, missingMarker(category, sourceText), severity, category, true);
+  };
+  const compareSeparators = (sourceText, typedText) => {
+    if (sourceText === typedText) { push(referenceParts, sourceText); push(typedParts, typedText); push(referenceReviewParts, sourceText); push(typedReviewParts, typedText); return; }
+    const category = /[\n\r]/u.test(sourceText + typedText) ? 'paragraphic' : 'spacing'; record(category, sourceText, typedText);
+  };
+  const compareWords = (sourceText, typedText) => {
+    if (sourceText === typedText) { push(referenceParts, sourceText); push(typedParts, typedText); push(referenceReviewParts, sourceText); push(typedReviewParts, typedText); return; }
+    const operations = alignTokenCharacters(sourceText, typedText);
+    for (let cursor = 0; cursor < operations.length;) {
+      if (operations[cursor].equal) { const item = operations[cursor++]; push(referenceParts, item.source); push(typedParts, item.typed); push(referenceReviewParts, item.source); push(typedReviewParts, item.typed); continue; }
+      let end = cursor + 1; while (end < operations.length && !operations[end].equal) end += 1;
+      const run = operations.slice(cursor, end); const sourceRun = run.map((item) => item.source).join(''); const typedRun = run.map((item) => item.typed).join('');
+      let category;
+      if (run.length === 1 && run[0].transposed) category = 'transposition';
+      else if (sourceRun && typedRun && sourceRun.localeCompare(typedRun, undefined, { sensitivity: 'accent' }) === 0) category = 'capitalization';
+      else if ([...sourceRun, ...typedRun].length && [...sourceRun, ...typedRun].every(isPunctuation)) category = 'punctuation';
+      else if (!typedRun && sourceRun) category = 'incompleteWord';
+      else if ([...sourceRun, ...typedRun].every(isLetter)) category = 'spelling';
+      else category = 'substitution';
+      record(category, sourceRun, typedRun); cursor = end;
+    }
+  };
+  const alignment = alignWordTokens(source.words, typed.words);
+  const sourceFrequency = new Map(source.words.map(({ text }) => [text, source.words.filter((word) => word.text === text).length]));
+  const typedFrequency = new Map(typed.words.map(({ text }) => [text, typed.words.filter((word) => word.text === text).length]));
+  for (let index = 0; index < alignment.length; index += 1) {
+    const operation = alignment[index];
+    if (operation.type === 'pair') { compareSeparators(operation.source.before, operation.typed.before); compareWords(operation.source.text, operation.typed.text); }
+    else if (operation.type === 'delete') record('omission', operation.source.before + operation.source.text, '', 1);
+    else if (operation.type === 'insert') {
+      const repeated = (typedFrequency.get(operation.typed.text) || 0) > (sourceFrequency.get(operation.typed.text) || 0);
+      record(repeated ? 'repetition' : 'addition', '', operation.typed.before + operation.typed.text, 1);
+    } else {
+      const sourceText = operation.source.map((word) => word.before + word.text).join(''); const typedText = operation.typed.map((word) => word.before + word.text).join('');
+      record('transposition', sourceText, typedText, 1);
+    }
+  }
+  compareSeparators(source.trailing, typed.trailing);
+  const halfErrors = allErrorsAreFull ? 0 : [...halfErrorCategories].reduce((sum, category) => sum + counts[category], 0);
+  const classifiedTotal = Object.values(counts).reduce((sum, value) => sum + value, 0);
+  return { counts, fullErrors: classifiedTotal - halfErrors, halfErrors, weightedErrors: classifiedTotal - halfErrors * 0.5, referenceParts, typedParts, referenceReviewParts, typedReviewParts };
+}
+
 function alignWithinBand(target, input, band) {
   const width = input.length + 1;
   const unreachable = 0x3fffffff;
@@ -256,7 +414,7 @@ export function calculateResult(source, typed, elapsedSeconds, telemetry = {}, s
     ...wordAlignment,
     errorUnits: round(errorUnits), scoringMode, errorPenalty, evaluationMode,
     fullErrors: errors.fullErrors, halfErrors: errors.halfErrors, weightedErrors: errors.weightedErrors,
-    errorBreakdown: errors.counts, comparison: { referenceParts: errors.referenceParts, typedParts: errors.typedParts, typedReviewParts: errors.typedReviewParts },
+    errorBreakdown: errors.counts, comparison: { referenceParts: errors.referenceParts, typedParts: errors.typedParts, referenceReviewParts: errors.referenceReviewParts, typedReviewParts: errors.typedReviewParts },
     totalKeystrokes,
     backspaceCount,
     timeTaken: round(safeSeconds)
