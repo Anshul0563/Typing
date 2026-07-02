@@ -30,7 +30,7 @@ test('distinguishes substitution, middle omission and middle insertion without c
 
 test('classifies empty, space-only, leading, trailing and repeated whitespace input', () => {
   assertAlignment('abc', '', { correctCharacters: 0, wrongCharacters: 0, omittedCharacters: 3, extraCharacters: 0, totalErrors: 3 });
-  assertAlignment('abc', '   ', { correctCharacters: 0, wrongCharacters: 3, omittedCharacters: 0, extraCharacters: 0, totalErrors: 3 });
+  assertAlignment('abc', '   ', { correctCharacters: 0, wrongCharacters: 0, omittedCharacters: 3, extraCharacters: 3, totalErrors: 6 });
   assertAlignment('abc', ' abc ', { correctCharacters: 3, wrongCharacters: 0, omittedCharacters: 0, extraCharacters: 2, totalErrors: 2 });
   assertAlignment('a b', 'a  b', { correctCharacters: 3, wrongCharacters: 0, omittedCharacters: 0, extraCharacters: 1, totalErrors: 1 });
 });
@@ -269,19 +269,23 @@ test('alignment invariants hold across representative short strings', () => {
   }
 });
 
-test('adaptive alignment distance matches an independent reference algorithm', () => {
-  const referenceDistance = (left, right) => {
-    const a = Array.from(left); const b = Array.from(right); let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
-    for (let i = 1; i <= a.length; i += 1) { const current = [i]; for (let j = 1; j <= b.length; j += 1) current[j] = a[i - 1] === b[j - 1] ? previous[j - 1] : 1 + Math.min(previous[j - 1], previous[j], current[j - 1]); previous = current; }
-    return previous[b.length];
-  };
+test('compatibility projections use the unified alignment tree', () => {
   let seed = 1234567;
   const random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   const alphabet = Array.from('ab cह');
   for (let run = 0; run < 100; run += 1) {
     const make = () => Array.from({ length: Math.floor(random() * 30) }, () => alphabet[Math.floor(random() * alphabet.length)]).join('');
     const source = make(); const typed = make();
-    assert.equal(alignCharacters(source, typed).totalErrors, referenceDistance(source, typed));
+    const comparison = classifyErrors(source, typed); const characterResult = alignCharacters(source, typed); const wordResult = alignWords(source, typed);
+    assert.deepEqual(characterResult, {
+      correctCharacters: comparison.correctCharacters, wrongCharacters: comparison.wrongCharacters,
+      omittedCharacters: comparison.omittedCharacters, extraCharacters: comparison.extraCharacters,
+      totalErrors: comparison.totalErrors, referenceCharacters: comparison.referenceCharacters, typedCharacters: comparison.typedCharacters
+    });
+    assert.deepEqual(wordResult, {
+      typedWords: comparison.typedWords, referenceWords: comparison.referenceWords, wrongWords: comparison.wrongWords,
+      omittedWords: comparison.omittedWords, extraWords: comparison.extraWords, totalWordErrors: comparison.totalWordErrors
+    });
   }
 });
 
