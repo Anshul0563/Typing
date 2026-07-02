@@ -259,6 +259,31 @@ test('persisted comparison spans and category totals share one source of truth',
   assert.equal(result.comparison.typedParts.map((part) => part.text).join(''), 'hello one  too');
 });
 
+test('full and half errors drive weighted scoring exactly', () => {
+  const practice = calculateResult('Hello world', 'hello wurld', 60, {}, { errorPenalty: 1 });
+  assert.equal(practice.fullErrors, 1);
+  assert.equal(practice.halfErrors, 1);
+  assert.equal(practice.weightedErrors, 1.5);
+  assert.equal(practice.errorUnits, 1.5);
+  assert.equal(practice.grossWpm, 2.2);
+  assert.equal(practice.netWpm, 0.7);
+  assert.equal(practice.accuracy, 86.36);
+
+  const doublePenalty = calculateResult('Hello world', 'hello wurld', 60, {}, { errorPenalty: 2 });
+  assert.equal(doublePenalty.weightedErrors, 1.5);
+  assert.equal(doublePenalty.errorUnits, 3);
+  assert.equal(doublePenalty.netWpm, 0);
+  assert.equal(doublePenalty.accuracy, practice.accuracy);
+
+  const steno = calculateResult('Hello world', 'hello wurld', 60, {}, { evaluationMode: 'ssc-stenographer' });
+  assert.equal(steno.fullErrors, 2);
+  assert.equal(steno.halfErrors, 0);
+  assert.equal(steno.weightedErrors, 2);
+  assert.equal(steno.errorUnits, 2);
+  assert.equal(steno.netWpm, 0.2);
+  assert.equal(steno.accuracy, 81.82);
+});
+
 test('alignment invariants hold across representative short strings', () => {
   const samples = ['', 'a', ' ', 'ab', 'a b', 'है', 'A\nB'];
   for (const source of samples) for (const typed of samples) {
