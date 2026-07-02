@@ -1,6 +1,8 @@
 const characters = (value) => Array.from(String(value ?? "").normalize("NFC"));
+
 const isPunctuation = (value) => /[\p{P}\p{S}]/u.test(value);
 const isLetter = (value) => /\p{L}/u.test(value);
+
 const HALF_CATEGORIES = new Set([
   "spacing",
   "capitalization",
@@ -8,6 +10,7 @@ const HALF_CATEGORIES = new Set([
   "transposition",
   "paragraphic",
 ]);
+
 const EMPTY_COUNTS = Object.freeze({
   omission: 0,
   addition: 0,
@@ -32,8 +35,10 @@ function tokenize(value) {
   const text = String(value ?? "")
     .normalize("NFC")
     .replace(/\r\n?/g, "\n");
+
   const words = [];
   let separator = "";
+
   for (const match of text.matchAll(/\s+|\S+/gu)) {
     if (/^\s+$/u.test(match[0])) separator += match[0];
     else {
@@ -45,76 +50,58 @@ function tokenize(value) {
       separator = "";
     }
   }
+
   return { words, trailing: separator };
 }
 
-/**
- * Finds the maximum ordered set of normalized word matches. These anchors are
- * immutable: unmatched regions are classified without sacrificing later matches.
- */
-function longestCommonWordAnchors(source, typed) {
-  const width = typed.length + 1;
-  const directions = new Uint8Array((source.length + 1) * width);
-  let twoBack = new Uint16Array(width);
-  let previous = new Uint16Array(width);
-  for (let i = 1; i <= source.length; i += 1) {
-    const current = new Uint16Array(width);
-    for (let j = 1; j <= typed.length; j += 1) {
-      const index = i * width + j;
-      const matches =
-        source[i - 1].canonical &&
-        source[i - 1].canonical === typed[j - 1].canonical;
-      if (matches) {
-        current[j] = previous[j - 1] + 1;
-        directions[index] = 1;
-      } else if (previous[j] >= current[j - 1]) {
-        current[j] = previous[j];
-        directions[index] = 2;
-      } else {
-        current[j] = current[j - 1];
-        directions[index] = 3;
-      }
-      const transposed =
-        i > 1 &&
-        j > 1 &&
-        source[i - 2].canonical &&
-        source[i - 2].canonical === typed[j - 1].canonical &&
-        source[i - 1].canonical === typed[j - 2].canonical;
-      if (transposed && twoBack[j - 2] + 2 >= current[j]) {
-        current[j] = twoBack[j - 2] + 2;
-        directions[index] = 4;
-      }
-    }
-    twoBack = previous;
-    previous = current;
-  }
-  const anchors = [];
-  let i = source.length;
-  let j = typed.length;
-  while (i && j) {
-    const direction = directions[i * width + j];
-    if (direction === 1) {
-      anchors.push({ sourceIndex: --i, typedIndex: --j });
-    } else if (direction === 4) {
-      anchors.push({
-        sourceIndex: i - 2,
-        typedIndex: j - 2,
-        transposition: true,
-      });
-      i -= 2;
-      j -= 2;
-    } else if (direction === 2) i -= 1;
-    else j -= 1;
-  }
-  return anchors.reverse();
+function severityFor(category, allErrorsAreFull) {
+  if (allErrorsAreFull) return "full";
+  return HALF_CATEGORIES.has(category) ? "half" : "full";
 }
 
-function characterAlignment(sourceValue, typedValue) {
-  const source = characters(sourceValue);
-  const typed = characters(typedValue);
+function missingMarker(category, text) {
+  if (category === "spacing") return "␠";
+  if (category === "paragraphic") return "↵";
+  if (category === "punctuation") return text || "·";
+  return "∅";
+}
+
+function classifyWordPair(sourceText, typedText) {
+  // `sourceText` and `typedText` are the word payloads (no separators).
+  if (sourceText === typedText) return { category: "correct", severity: "correct" };
+
+  if (
+    sourceText &&
+    typedText &&
+    sourceText.localeCompare(typedText, undefined, { sensitivity: "accent" }) === 0
+  ) {
+    return { category: "capitalization", severity: "half" };
+  }
+
+  const combined = [...sourceText, ...typedText];
+  if (combined.length && combined.every(isPunctuation)) {
+    return { category: "punctuation", severity: "half" };
+  }
+
+  if (!typedText && sourceText) return { category: "incompleteWord", severity: "full" };
+
+  if (combined.length && combined.every(isLetter)) {
+    return { category: "spelling", severity: "full" };
+  }
+
+  return { category: "substitution", severity: "full" };
+}
+
+function constrainedCharacterStats(sourceText, typedText) {
+  // Counts are computed by character edit alignment restricted to this word pair.
+  // This is where character comparisons happen. No alignment can jump across words.
+  const source = characters(sourceText);
+  const typed = characters(typedText);
+
   const width = typed.length + 1;
   const costs = new Uint16Array((source.length + 1) * width);
   const directions = new Uint8Array(costs.length);
+
   for (let i = 1; i <= source.length; i += 1) {
     costs[i * width] = i;
     directions[i * width] = 2;
@@ -123,386 +110,414 @@ function characterAlignment(sourceValue, typedValue) {
     costs[j] = j;
     directions[j] = 3;
   }
-  for (let i = 1; i <= source.length; i += 1)
+
+  for (let i = 1; i <= source.length; i += 1) {
     for (let j = 1; j <= typed.length; j += 1) {
       const index = i * width + j;
       if (source[i - 1] === typed[j - 1]) {
-        costs[index] = costs[(i - 1) * width + j - 1];
+        costs[index] = costs[(i - 1) * width + (j - 1)];
         directions[index] = 1;
         continue;
       }
-      let cost = costs[(i - 1) * width + j - 1] + 1;
+
+      let cost = costs[(i - 1) * width + (j - 1)] + 1;
       let direction = 4;
+
       const deletion = costs[(i - 1) * width + j] + 1;
       if (deletion < cost) {
         cost = deletion;
         direction = 2;
       }
-      const insertion = costs[i * width + j - 1] + 1;
+
+      const insertion = costs[i * width + (j - 1)] + 1;
       if (insertion < cost) {
         cost = insertion;
         direction = 3;
       }
+
       if (
         i > 1 &&
         j > 1 &&
         source[i - 2] === typed[j - 1] &&
         source[i - 1] === typed[j - 2]
       ) {
-        const transpose = costs[(i - 2) * width + j - 2] + 1;
+        const transpose = costs[(i - 2) * width + (j - 2)] + 1;
         if (transpose <= cost) {
           cost = transpose;
           direction = 5;
         }
       }
+
       costs[index] = cost;
       directions[index] = direction;
     }
-  const operations = [];
+  }
+
+  // Backtrace operations to compute correct/wrong/omitted/extra counts.
+  // Note: This is still within the same word pair only.
+  let correctCharacters = 0;
+  let wrongCharacters = 0;
+  let omittedCharacters = 0;
+  let extraCharacters = 0;
+
   let i = source.length;
   let j = typed.length;
+
   while (i || j) {
     const direction = directions[i * width + j];
-    if (direction === 1)
-      operations.push({ source: source[--i], typed: typed[--j], equal: true });
-    else if (direction === 5) {
-      operations.push({
-        source: source.slice(i - 2, i).join(""),
-        typed: typed.slice(j - 2, j).join(""),
-        transposed: true,
-      });
+    if (direction === 1) {
+      // equal
+      correctCharacters += 1;
+      i -= 1;
+      j -= 1;
+    } else if (direction === 5) {
+      // transposed pair: count as wrong for both swapped characters
+      // We treat as 2 paired characters differing.
+      wrongCharacters += 2;
       i -= 2;
       j -= 2;
-    } else if (direction === 4 && i && j)
-      operations.push({ source: source[--i], typed: typed[--j] });
-    else if ((direction === 2 || !j) && i)
-      operations.push({ source: source[--i], typed: "" });
-    else operations.push({ source: "", typed: typed[--j] });
+    } else if (direction === 4 && i && j) {
+      wrongCharacters += 1;
+      i -= 1;
+      j -= 1;
+    } else if ((direction === 2 || !j) && i) {
+      omittedCharacters += 1;
+      i -= 1;
+    } else {
+      extraCharacters += 1;
+      j -= 1;
+    }
   }
-  return operations.reverse();
+
+  return { correctCharacters, wrongCharacters, omittedCharacters, extraCharacters };
 }
 
-function missingMarker(category, text) {
-  if (category === 'spacing') return '␠';
-  if (category === 'paragraphic') return '↵';
-  if (category === 'punctuation') return text || '·';
-  return '∅';
+function wordAnchors(sourceWords, typedWords) {
+  // Strict word-first alignment using canonical word equality.
+  // We keep this DP lightweight: compute LCS anchors by canonical equality only.
+  const m = sourceWords.length;
+  const n = typedWords.length;
+
+  const width = n + 1;
+  const directions = new Uint8Array((m + 1) * width);
+  const dp = new Uint16Array((m + 1) * width);
+
+  for (let i = 1; i <= m; i += 1) {
+    for (let j = 1; j <= n; j += 1) {
+      const index = i * width + j;
+      if (sourceWords[i - 1].canonical && sourceWords[i - 1].canonical === typedWords[j - 1].canonical) {
+        dp[index] = dp[(i - 1) * width + (j - 1)] + 1;
+        directions[index] = 1; // match
+      } else {
+        const up = dp[(i - 1) * width + j];
+        const left = dp[i * width + (j - 1)];
+        if (up >= left) {
+          dp[index] = up;
+          directions[index] = 2; // up
+        } else {
+          dp[index] = left;
+          directions[index] = 3; // left
+        }
+      }
+    }
+  }
+
+  const anchors = [];
+  let i = m;
+  let j = n;
+  while (i && j) {
+    const dir = directions[i * width + j];
+    if (dir === 1) {
+      anchors.push({ sourceIndex: i - 1, typedIndex: j - 1 });
+      i -= 1;
+      j -= 1;
+    } else if (dir === 2) {
+      i -= 1;
+    } else {
+      j -= 1;
+    }
+  }
+  return anchors.reverse();
 }
 
+function buildPartsFromWordPair({
+  sourceSeparator,
+  typedSeparator,
+  sourceWord,
+  typedWord,
+  category,
+  severity,
+  counts,
+  alignmentTree,
+  referenceParts,
+  typedParts,
+  referenceReviewParts,
+  typedReviewParts,
+  allErrorsAreFull,
+}) {
+  // Category can be either full-word or half-word/half-category.
+  // Separators are handled separately as spacing/paragraphic.
 
-export function compareTexts(
-  sourceValue,
-  typedValue,
-  allErrorsAreFull = false,
-) {
+  if (sourceWord) {
+    referenceParts.push({ text: sourceWord.separator + sourceWord.text, severity, category });
+    referenceReviewParts.push({ text: sourceWord.separator + sourceWord.text, severity, category });
+  }
+  if (typedWord) {
+    typedParts.push({ text: typedWord.separator + typedWord.text, severity, category });
+    typedReviewParts.push({ text: typedWord.separator + typedWord.text, severity, category });
+  }
+
+  // Count errors
+  counts[category] += 1;
+  alignmentTree.push({ sourceText: sourceWord ? sourceWord.separator + sourceWord.text : "", typedText: typedWord ? typedWord.separator + typedWord.text : "", category, severity });
+}
+
+export function compareTexts(sourceValue, typedValue, allErrorsAreFull = false) {
   const source = tokenize(sourceValue);
   const typed = tokenize(typedValue);
+
   const counts = { ...EMPTY_COUNTS };
   const alignmentTree = [];
+
   const characterStats = {
     correctCharacters: 0,
     wrongCharacters: 0,
     omittedCharacters: 0,
     extraCharacters: 0,
   };
+
   const wordStats = { wrongWords: 0, omittedWords: 0, extraWords: 0 };
+
   const referenceParts = [];
   const typedParts = [];
   const referenceReviewParts = [];
   const typedReviewParts = [];
-  const severityFor = (category) =>
-    !allErrorsAreFull && HALF_CATEGORIES.has(category) ? "half" : "full";
-  const push = (
-    parts,
-    text,
-    severity = "correct",
-    category = "correct",
-    missing = false,
-  ) => {
-    if (!text) return;
-    const previous = parts.at(-1);
-    if (
-      !missing &&
-      !previous?.missing &&
-      previous?.severity === severity &&
-      previous?.category === category
-    )
-      previous.text += text;
-    else
-      parts.push({
-        text,
-        severity,
-        category,
-        ...(missing && { missing: true }),
-      });
-  };
-  const record = (category, sourceText, typedText, amount = 1) => {
-    counts[category] += amount;
-    const severity = severityFor(category);
-    alignmentTree.push({ sourceText, typedText, category, severity });
 
-    for (const operation of characterAlignment(sourceText, typedText)) {
-      const sourceLength = characters(operation.source).length;
-      const typedLength = characters(operation.typed).length;
-      if (operation.equal) characterStats.correctCharacters += sourceLength;
-      else {
-        const paired = Math.min(sourceLength, typedLength);
-        characterStats.wrongCharacters += paired;
-        characterStats.omittedCharacters += sourceLength - paired;
-        characterStats.extraCharacters += typedLength - paired;
-      }
-    }
-    if (sourceText) {
-      push(referenceParts, sourceText, severity, category);
-      push(referenceReviewParts, sourceText, severity, category);
-    } else
-      push(
-        referenceReviewParts,
-        missingMarker(category, typedText),
-        severity,
-        category,
-        true,
-      );
-    if (typedText) {
-      push(typedParts, typedText, severity, category);
-      push(typedReviewParts, typedText, severity, category);
-    } else
-      push(
-        typedReviewParts,
-        missingMarker(category, sourceText),
-        severity,
-        category,
-        true,
-      );
+  // We align word tokens first.
+  const anchors = wordAnchors(source.words, typed.words);
 
-  };
-  const equal = (sourceText, typedText) => {
-    if (sourceText || typedText)
-      alignmentTree.push({
-        sourceText,
-        typedText,
-        category: "correct",
-        severity: "correct",
-      });
-    characterStats.correctCharacters += characters(sourceText).length;
-    push(referenceParts, sourceText);
-    push(referenceReviewParts, sourceText);
-    push(typedParts, typedText);
-    push(typedReviewParts, typedText);
-  };
-  const compareSeparators = (left, right) => {
-    if (left === right) equal(left, right);
-    else
-      record(
-        /[\n\r]/u.test(left + right) ? "paragraphic" : "spacing",
-        left,
-        right,
-      );
-  };
-  const compareWords = (left, right) => {
+  let sCursor = 0;
+  let tCursor = 0;
+
+  const commitSeparator = (left, right) => {
     if (left === right) {
-      equal(left, right);
-      return;
-    }
-    const operations = characterAlignment(left, right);
-    for (let cursor = 0; cursor < operations.length; ) {
-      if (operations[cursor].equal) {
-        const operation = operations[cursor++];
-        equal(operation.source, operation.typed);
-        continue;
+      if (left) {
+        alignmentTree.push({ sourceText: left, typedText: left, category: "correct", severity: "correct" });
+        referenceParts.push({ text: left, severity: "correct", category: "correct" });
+        referenceReviewParts.push({ text: left, severity: "correct", category: "correct" });
+        typedParts.push({ text: left, severity: "correct", category: "correct" });
+        typedReviewParts.push({ text: left, severity: "correct", category: "correct" });
       }
-      let end = cursor + 1;
-      while (end < operations.length && !operations[end].equal) end += 1;
-      const run = operations.slice(cursor, end);
-      const sourceText = run.map((operation) => operation.source).join("");
-      const typedText = run.map((operation) => operation.typed).join("");
-      let category;
-      if (run.length === 1 && run[0].transposed) category = "transposition";
-      else if (
-        sourceText &&
-        typedText &&
-        sourceText.localeCompare(typedText, undefined, {
-          sensitivity: "accent",
-        }) === 0
-      )
-        category = "capitalization";
-      else if (
-        [...sourceText, ...typedText].length &&
-        [...sourceText, ...typedText].every(isPunctuation)
-      )
-        category = "punctuation";
-      else if (!typedText && sourceText) category = "incompleteWord";
-      else if ([...sourceText, ...typedText].every(isLetter))
-        category = "spelling";
-      else category = "substitution";
-      record(category, sourceText, typedText);
-      cursor = end;
+      return;
     }
-  };
 
+    const category = /[\n\r]/u.test(left + right) ? "paragraphic" : "spacing";
+    const severity = severityFor(category, allErrorsAreFull);
+    counts[category] += 1;
 
+    alignmentTree.push({ sourceText: left, typedText: right, category, severity });
 
-  const sourceFrequency = source.words.reduce(
-    (map, word) => map.set(word.canonical, (map.get(word.canonical) || 0) + 1),
-    new Map(),
-  );
-  const typedFrequency = typed.words.reduce(
-    (map, word) => map.set(word.canonical, (map.get(word.canonical) || 0) + 1),
-    new Map(),
-  );
-  const omit = (word) => {
-    wordStats.omittedWords += 1;
-    record("omission", word.separator + word.text, "");
-  };
-  const add = (word) => {
-    const sourceCount = sourceFrequency.get(word.canonical) || 0;
-    const repetition =
-      sourceCount > 0 &&
-      (typedFrequency.get(word.canonical) || 0) > sourceCount;
-    wordStats.extraWords += 1;
-    record(
-      repetition ? "repetition" : "addition",
-      "",
-      word.separator + word.text,
-    );
-  };
-  const pair = (sourceWord, typedWord) => {
-    const fullBefore =
-      counts.omission +
-      counts.addition +
-      counts.spelling +
-      counts.substitution +
-      counts.repetition +
-      counts.incompleteWord;
-    compareSeparators(sourceWord.separator, typedWord.separator);
-    compareWords(sourceWord.text, typedWord.text);
-    const fullAfter =
-      counts.omission +
-      counts.addition +
-      counts.spelling +
-      counts.substitution +
-      counts.repetition +
-      counts.incompleteWord;
-    if (fullAfter > fullBefore) wordStats.wrongWords += 1;
-  };
-  const resolveRegion = (sourceRegion, typedRegion) => {
-    if (!sourceRegion.length) {
-      typedRegion.forEach(add);
-      return;
-    }
-    if (!typedRegion.length) {
-      sourceRegion.forEach(omit);
-      return;
-    }
-    if (
-      sourceRegion.length === 2 &&
-      typedRegion.length === 2 &&
-      sourceRegion[0].canonical === typedRegion[1].canonical &&
-      sourceRegion[1].canonical === typedRegion[0].canonical
-    ) {
-      wordStats.wrongWords += 2;
-      record(
-        "transposition",
-        sourceRegion.map((word) => word.separator + word.text).join(""),
-        typedRegion.map((word) => word.separator + word.text).join(""),
-      );
-      return;
-    }
-    if (
-      sourceRegion.length === 2 &&
-      typedRegion.length === 1 &&
-      sourceRegion.map((word) => word.canonical).join("") ===
-        typedRegion[0].canonical
-    ) {
-      compareSeparators(sourceRegion[0].separator, typedRegion[0].separator);
-      compareWords(
-        sourceRegion[0].text,
-        typedRegion[0].text.slice(0, sourceRegion[0].text.length),
-      );
-      compareSeparators(sourceRegion[1].separator, "");
-      compareWords(
-        sourceRegion[1].text,
-        typedRegion[0].text.slice(sourceRegion[0].text.length),
-      );
-      return;
-    }
-    if (
-      sourceRegion.length === 1 &&
-      typedRegion.length === 2 &&
-      sourceRegion[0].canonical ===
-        typedRegion.map((word) => word.canonical).join("")
-    ) {
-      compareSeparators(sourceRegion[0].separator, typedRegion[0].separator);
-      compareWords(
-        sourceRegion[0].text.slice(0, typedRegion[0].text.length),
-        typedRegion[0].text,
-      );
-      compareSeparators("", typedRegion[1].separator);
-      compareWords(
-        sourceRegion[0].text.slice(typedRegion[0].text.length),
-        typedRegion[1].text,
-      );
-      return;
-    }
-    const paired = Math.min(sourceRegion.length, typedRegion.length);
-    for (let index = 0; index < paired; index += 1)
-      pair(sourceRegion[index], typedRegion[index]);
-    sourceRegion.slice(paired).forEach(omit);
-    typedRegion.slice(paired).forEach(add);
-  };
-
-  const anchors = longestCommonWordAnchors(source.words, typed.words);
-  let sourceCursor = 0;
-  let typedCursor = 0;
-  for (const anchor of [
-    ...anchors,
-    {
-      sourceIndex: source.words.length,
-      typedIndex: typed.words.length,
-      terminal: true,
-    },
-  ]) {
-    resolveRegion(
-      source.words.slice(sourceCursor, anchor.sourceIndex),
-      typed.words.slice(typedCursor, anchor.typedIndex),
-    );
-    if (anchor.transposition) {
-      wordStats.wrongWords += 2;
-      record(
-        "transposition",
-        source.words
-          .slice(anchor.sourceIndex, anchor.sourceIndex + 2)
-          .map((word) => word.separator + word.text)
-          .join(""),
-        typed.words
-          .slice(anchor.typedIndex, anchor.typedIndex + 2)
-          .map((word) => word.separator + word.text)
-          .join(""),
-      );
-      sourceCursor = anchor.sourceIndex + 2;
-      typedCursor = anchor.typedIndex + 2;
+    // Reference panel: show separator text if exists, otherwise show a missing-marker for review.
+    if (left) {
+      referenceParts.push({ text: left, severity, category });
+      referenceReviewParts.push({ text: left, severity, category });
     } else {
-      if (!anchor.terminal)
-        pair(source.words[anchor.sourceIndex], typed.words[anchor.typedIndex]);
-      sourceCursor = anchor.sourceIndex + 1;
-      typedCursor = anchor.typedIndex + 1;
+      // missing from reference
+      referenceReviewParts.push({
+        text: missingMarker(category, right),
+        severity,
+        category,
+        missing: true,
+      });
     }
+
+    // Typed panel
+    if (right) {
+      typedParts.push({ text: right, severity, category });
+      typedReviewParts.push({ text: right, severity, category });
+    } else {
+      typedReviewParts.push({
+        text: missingMarker(category, left),
+        severity,
+        category,
+        missing: true,
+      });
+    }
+
+    // Character stats for separators are counted by constrained alignment of the separator strings.
+    const { correctCharacters, wrongCharacters, omittedCharacters, extraCharacters } = constrainedCharacterStats(left, right);
+    characterStats.correctCharacters += correctCharacters;
+    characterStats.wrongCharacters += wrongCharacters;
+    characterStats.omittedCharacters += omittedCharacters;
+    characterStats.extraCharacters += extraCharacters;
+  };
+
+  // Process segments between anchors.
+  const handleWordPairOrGaps = (sourceSeg, typedSeg) => {
+    // sourceSeg and typedSeg are arrays of word tokens.
+    // If both have at least one word, pair by index until one runs out.
+    const paired = Math.min(sourceSeg.length, typedSeg.length);
+
+    for (let i = 0; i < paired; i += 1) {
+      const sw = sourceSeg[i];
+      const tw = typedSeg[i];
+
+      // Separators are treated as half/full depending on category.
+      commitSeparator(sw.separator, tw.separator);
+
+      const { category } = classifyWordPair(sw.text, tw.text);
+      const severity = severityFor(category, allErrorsAreFull);
+
+      // update alignmentTree + parts for full word token
+      alignmentTree.push({
+        sourceText: sw.separator + sw.text,
+        typedText: tw.separator + tw.text,
+        category,
+        severity,
+      });
+
+      if (category === "correct") {
+        // correct
+        characterStats.correctCharacters += characters(sw.text).length;
+        referenceParts.push({ text: sw.separator + sw.text, severity: "correct", category: "correct" });
+        referenceReviewParts.push({ text: sw.separator + sw.text, severity: "correct", category: "correct" });
+        typedParts.push({ text: tw.separator + tw.text, severity: "correct", category: "correct" });
+        typedReviewParts.push({ text: tw.separator + tw.text, severity: "correct", category: "correct" });
+      } else {
+        // error counts: for repetition/addition/omission we compute below by frequency in the whole run.
+        // For now, map word-level full errors to substitution/spelling/incompleteWord/etc only.
+        counts[category] += 1;
+
+        // Character stats constrained inside word pair only.
+        const cs = constrainedCharacterStats(sw.text, tw.text);
+        characterStats.correctCharacters += cs.correctCharacters;
+        characterStats.wrongCharacters += cs.wrongCharacters;
+        characterStats.omittedCharacters += cs.omittedCharacters;
+        characterStats.extraCharacters += cs.extraCharacters;
+
+        // Word highlight: emit entire word token in both panels for full-word errors.
+        referenceParts.push({ text: sw.separator + sw.text, severity, category });
+        referenceReviewParts.push({ text: sw.separator + sw.text, severity, category });
+        typedParts.push({ text: tw.separator + tw.text, severity, category });
+        typedReviewParts.push({ text: tw.separator + tw.text, severity, category });
+      }
+
+      if (category !== "correct") wordStats.wrongWords += 1;
+    }
+
+    // Remaining words: omissions/additions.
+    for (let i = paired; i < sourceSeg.length; i += 1) {
+      const sw = sourceSeg[i];
+      wordStats.omittedWords += 1;
+      counts.omission += 1;
+      alignmentTree.push({ sourceText: sw.separator + sw.text, typedText: "", category: "omission", severity: "full" });
+
+      // Reference shows word; typed review shows missing marker only.
+      referenceParts.push({ text: sw.separator + sw.text, severity: "full", category: "omission" });
+      referenceReviewParts.push({ text: sw.separator + sw.text, severity: "full", category: "omission" });
+      typedReviewParts.push({ text: missingMarker("omission", sw.separator + sw.text), severity: "full", category: "omission", missing: true });
+
+      const cs = constrainedCharacterStats(sw.text, "");
+      characterStats.correctCharacters += cs.correctCharacters;
+      characterStats.wrongCharacters += cs.wrongCharacters;
+      characterStats.omittedCharacters += cs.omittedCharacters;
+      characterStats.extraCharacters += cs.extraCharacters;
+    }
+
+    for (let i = paired; i < typedSeg.length; i += 1) {
+      const tw = typedSeg[i];
+      wordStats.extraWords += 1;
+      counts.addition += 1;
+      alignmentTree.push({ sourceText: "", typedText: tw.separator + tw.text, category: "addition", severity: "full" });
+
+      typedParts.push({ text: tw.separator + tw.text, severity: "full", category: "addition" });
+      typedReviewParts.push({ text: tw.separator + tw.text, severity: "full", category: "addition" });
+      referenceReviewParts.push({ text: missingMarker("addition", tw.separator + tw.text), severity: "full", category: "addition", missing: true });
+
+      const cs = constrainedCharacterStats("", tw.text);
+      characterStats.correctCharacters += cs.correctCharacters;
+      characterStats.wrongCharacters += cs.wrongCharacters;
+      characterStats.omittedCharacters += cs.omittedCharacters;
+      characterStats.extraCharacters += cs.extraCharacters;
+    }
+  };
+
+  for (const anchor of anchors) {
+    const sBetween = source.words.slice(sCursor, anchor.sourceIndex);
+    const tBetween = typed.words.slice(tCursor, anchor.typedIndex);
+    handleWordPairOrGaps(sBetween, tBetween);
+
+    // Commit the anchored word pair as correct by canonical identity.
+    const sw = source.words[anchor.sourceIndex];
+    const tw = typed.words[anchor.typedIndex];
+
+    // Separators must be handled.
+    commitSeparator(sw.separator, tw.separator);
+
+    // Determine exact category within the word.
+    const classified = classifyWordPair(sw.text, tw.text);
+    const category = classified.category;
+    const severity = severityFor(category, allErrorsAreFull);
+
+    alignmentTree.push({
+      sourceText: sw.separator + sw.text,
+      typedText: tw.separator + tw.text,
+      category,
+      severity,
+    });
+
+    if (category === "correct") {
+      const cs = constrainedCharacterStats(sw.text, tw.text);
+      characterStats.correctCharacters += cs.correctCharacters;
+      characterStats.wrongCharacters += cs.wrongCharacters;
+      characterStats.omittedCharacters += cs.omittedCharacters;
+      characterStats.extraCharacters += cs.extraCharacters;
+      referenceParts.push({ text: sw.separator + sw.text, severity: "correct", category: "correct" });
+      referenceReviewParts.push({ text: sw.separator + sw.text, severity: "correct", category: "correct" });
+      typedParts.push({ text: tw.separator + tw.text, severity: "correct", category: "correct" });
+      typedReviewParts.push({ text: tw.separator + tw.text, severity: "correct", category: "correct" });
+    } else {
+      counts[category] += 1;
+      const cs = constrainedCharacterStats(sw.text, tw.text);
+      characterStats.correctCharacters += cs.correctCharacters;
+      characterStats.wrongCharacters += cs.wrongCharacters;
+      characterStats.omittedCharacters += cs.omittedCharacters;
+      characterStats.extraCharacters += cs.extraCharacters;
+
+      // Whole word highlight for word-level errors.
+      referenceParts.push({ text: sw.separator + sw.text, severity, category });
+      referenceReviewParts.push({ text: sw.separator + sw.text, severity, category });
+      typedParts.push({ text: tw.separator + tw.text, severity, category });
+      typedReviewParts.push({ text: tw.separator + tw.text, severity, category });
+    }
+
+    sCursor = anchor.sourceIndex + 1;
+    tCursor = anchor.typedIndex + 1;
   }
-  compareSeparators(source.trailing, typed.trailing);
+
+  // Tail
+  handleWordPairOrGaps(source.words.slice(sCursor), typed.words.slice(tCursor));
+  // Trailing separators are handled as a separator commit vs empty.
+  commitSeparator(source.trailing, typed.trailing);
+
+  // Derived totals.
   const halfErrors = allErrorsAreFull
     ? 0
     : [...HALF_CATEGORIES].reduce((sum, category) => sum + counts[category], 0);
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+
   const referenceCharacters = characters(
     String(sourceValue ?? "")
       .normalize("NFC")
       .replace(/\r\n?/g, "\n"),
   ).length;
+
   const typedCharacters = characters(
     String(typedValue ?? "")
       .normalize("NFC")
       .replace(/\r\n?/g, "\n"),
   ).length;
+
   return {
     alignmentTree,
     counts,
@@ -519,11 +534,40 @@ export function compareTexts(
     referenceWords: source.words.length,
     typedWords: typed.words.length,
     ...wordStats,
-    totalWordErrors:
-      wordStats.wrongWords + wordStats.omittedWords + wordStats.extraWords,
+    totalWordErrors: wordStats.wrongWords + wordStats.omittedWords + wordStats.extraWords,
     referenceParts,
     typedParts,
     referenceReviewParts,
     typedReviewParts,
   };
 }
+
+// Backwards compatible API expected by server/src/utils/scoring.js
+// (scoring.js calls compareTexts via these exports in other files).
+export const alignCharacters = (source, typed) => {
+  const comparison = compareTexts(source, typed);
+  return {
+    correctCharacters: comparison.correctCharacters,
+    wrongCharacters: comparison.wrongCharacters,
+    omittedCharacters: comparison.omittedCharacters,
+    extraCharacters: comparison.extraCharacters,
+    totalErrors: comparison.totalErrors,
+    referenceCharacters: comparison.referenceCharacters,
+    typedCharacters: comparison.typedCharacters,
+  };
+};
+
+export const alignWords = (source, typed) => {
+  const comparison = compareTexts(source, typed);
+  return {
+    typedWords: comparison.typedWords,
+    referenceWords: comparison.referenceWords,
+    wrongWords: comparison.wrongWords,
+    omittedWords: comparison.omittedWords,
+    extraWords: comparison.extraWords,
+    totalWordErrors: comparison.totalWordErrors,
+  };
+};
+
+export const classifyErrors = (source, typed) => compareTexts(source, typed);
+
