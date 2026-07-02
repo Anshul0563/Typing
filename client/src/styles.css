@@ -153,6 +153,7 @@
 .comparison-text mark.compare-missing { display:inline-block;min-width:17px;margin-inline:2px;padding:1px 4px;text-align:center;font-weight:800;line-height:1.35; }
 .compare-full { background:#dc2626!important;color:#fff!important; }
 .compare-half { background:#2563eb!important;color:#fff!important; }
+.comparison-card:nth-child(2) .comparison-text mark.compare-half { background:#2563eb!important;color:#fff!important;box-shadow:0 0 0 1px rgba(37,99,235,.18); }
 .comparison-empty { color:var(--muted);font-style:italic;margin:0; }
 .comparison-legend { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px; }
 .comparison-legend.single-legend { grid-template-columns:1fr; }
