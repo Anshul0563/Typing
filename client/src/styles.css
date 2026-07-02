@@ -146,6 +146,8 @@
 .comparison-card>header { display:flex;align-items:center;gap:9px;border-bottom:1px solid #edf1f6;padding-bottom:12px;margin-bottom:14px; }
 .comparison-card>header svg { width:18px;color:var(--brand); }
 .comparison-card h3 { margin:0;font-size:16px; }
+.comparison-card-key { margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:9px;font-weight:700;white-space:nowrap; }
+.comparison-card-key i { width:10px;height:10px;border-radius:3px; }
 .comparison-text { white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:15px;margin:0; }
 .comparison-text mark { color:#fff!important;border-radius:3px;padding:2px 1px;margin:0;box-decoration-break:clone;-webkit-box-decoration-break:clone; }
 .compare-full { background:#dc2626!important;color:#fff!important; }
