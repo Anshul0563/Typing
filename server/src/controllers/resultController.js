@@ -3,7 +3,7 @@ import { Paragraph } from '../models/Paragraph.js';
 import { Exam } from '../models/Exam.js';
 import { AppError } from '../utils/AppError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { calculateResult } from '../utils/scoring.js';
+import { calculateResult, classifyErrors } from '../utils/scoring.js';
 import { verifyTestToken } from '../utils/jwt.js';
 import { calculateElapsedSeconds } from '../utils/testTiming.js';
 import { resolveEvaluationMode } from '../utils/examMode.js';
@@ -20,6 +20,13 @@ const scoringRuleForMode = (exam, testMode) => ({
   errorPenalty: exam.scoringRule?.errorPenalty ?? modeScoringRules[testMode]?.errorPenalty ?? 1
 });
 
+const withSynchronizedComparison = (result) => {
+  const value = typeof result?.toObject === 'function' ? result.toObject() : result;
+  if (!value?.paragraph?.content || value.comparison?.referenceReviewParts) return value;
+  const review = classifyErrors(value.paragraph.content, value.typedText || '', value.evaluationMode === 'ssc-stenographer');
+  return { ...value, comparison: { ...(value.comparison || {}), referenceReviewParts: review.referenceReviewParts, typedReviewParts: review.typedReviewParts } };
+};
+
 export const submitResult = asyncHandler(async (req, res) => {
   const paragraph = await Paragraph.findById(req.body.paragraphId);
   if (!paragraph) throw new AppError('Paragraph not found', 404);
@@ -29,7 +36,7 @@ export const submitResult = asyncHandler(async (req, res) => {
   try { session = verifyTestToken(req.body.testToken); } catch { throw new AppError('Test session is invalid or expired', 400); }
   if (session.type !== 'typing-test' || session.sub !== req.user._id.toString() || session.paragraphId !== paragraph._id.toString() || session.examId !== exam._id.toString() || session.testMode !== req.body.testMode) throw new AppError('Test session does not match this submission', 400);
   const existingResult = await Result.findOne({ testSessionId: session.jti }).populate('exam', 'name language').populate('paragraph', 'title content');
-  if (existingResult) return res.json({ success: true, result: existingResult });
+  if (existingResult) return res.json({ success: true, result: withSynchronizedComparison(existingResult) });
   const elapsedSeconds = calculateElapsedSeconds(session.startedAt, Date.now(), (session.endsAt - session.startedAt) / 1000);
   const typedLength = Array.from(req.body.typedText.normalize('NFC')).length;
   const referenceLength = Array.from(paragraph.content.normalize('NFC')).length;
@@ -50,7 +57,7 @@ export const getResult = asyncHandler(async (req, res) => {
   if (req.user.role !== 'admin') filter.user = req.user._id;
   const result = await Result.findOne(filter).populate('exam', 'name language').populate('paragraph', 'title content');
   if (!result) throw new AppError('Result not found', 404);
-  res.json({ success: true, result });
+  res.json({ success: true, result: withSynchronizedComparison(result) });
 });
 
 export const deleteResult = asyncHandler(async (req, res) => {

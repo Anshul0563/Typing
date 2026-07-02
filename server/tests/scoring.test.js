@@ -157,6 +157,57 @@ test('typed review exposes visible markers for half errors missing from typed in
   assert.equal(spacingMarker.category, 'spacing');
 });
 
+test('comparison realigns after single, multiple and long word omissions', () => {
+  const cases = [
+    ['one two three four', 'one three four', 1],
+    ['one two three four five', 'one four five', 2],
+    ['start this entire middle sentence must disappear safely before the stable ending', 'start before the stable ending', 7]
+  ];
+  for (const [source, typed, omissions] of cases) {
+    const result = classifyErrors(source, typed);
+    assert.equal(result.counts.omission, omissions);
+    assert.equal(result.counts.spelling, 0);
+    assert.equal(result.counts.substitution, 0);
+    assert.equal(result.referenceReviewParts.at(-1).text.endsWith('ending') || result.referenceReviewParts.at(-1).text.endsWith('four') || result.referenceReviewParts.at(-1).text.endsWith('five'), true);
+    assert.equal(result.referenceReviewParts.at(-1).severity, 'correct');
+    assert.equal(result.typedReviewParts.at(-1).severity, 'correct');
+  }
+});
+
+test('paired review highlights every requested error type in both panels', () => {
+  const cases = [
+    ['addition', 'one two', 'one extra two', 'full'],
+    ['punctuation', 'Hello, world', 'Hello world', 'half'],
+    ['punctuation', 'Done.', 'Done', 'half'],
+    ['spacing', 'one two', 'one  two', 'half'],
+    ['capitalization', 'Hello world', 'hello world', 'half'],
+    ['transposition', 'one two three', 'one three two', 'half'],
+    ['incompleteWord', 'complete word', 'comple word', 'full']
+  ];
+  for (const [category, source, typed, severity] of cases) {
+    const result = classifyErrors(source, typed);
+    assert.ok(result.counts[category] > 0, category);
+    for (const parts of [result.referenceReviewParts, result.typedReviewParts]) {
+      const highlight = parts.find((part) => part.category === category);
+      assert.ok(highlight, `${category} missing from a panel`);
+      assert.equal(highlight.severity, severity, category);
+    }
+  }
+});
+
+test('missing spaces and repeated words retain synchronized paired output', () => {
+  const missingSpace = classifyErrors('one two three', 'onetwo three');
+  assert.equal(missingSpace.counts.spacing, 1);
+  assert.equal(missingSpace.counts.spelling, 0);
+  assert.equal(missingSpace.referenceReviewParts.some((part) => part.category === 'spacing' && part.severity === 'half'), true);
+  assert.equal(missingSpace.typedReviewParts.some((part) => part.category === 'spacing' && part.severity === 'half' && part.missing), true);
+
+  const repeated = classifyErrors('one two three', 'one two two three');
+  assert.equal(repeated.counts.repetition, 1);
+  assert.equal(repeated.referenceReviewParts.some((part) => part.category === 'repetition' && part.missing), true);
+  assert.equal(repeated.typedReviewParts.some((part) => part.category === 'repetition'), true);
+});
+
 test('classifies incomplete prefixes, repeated words and multi-word omissions precisely', () => {
   const incompletePrefix = classifyErrors('typing', 'yping');
   assert.equal(incompletePrefix.counts.incompleteWord, 1);

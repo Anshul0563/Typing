@@ -210,6 +210,14 @@ function alignWordTokens(sourceWords, typedWords) {
         const transposition = twoBack[j - 2] + 1;
         if (transposition <= best + 1e-9) { best = transposition; direction = 4; }
       }
+      if (i > 1 && sourceWords[i - 2].text + source === typed) {
+        const merged = twoBack[j - 1] + 0.5;
+        if (merged <= best + 1e-9) { best = merged; direction = 5; }
+      }
+      if (j > 1 && source === typedWords[j - 2].text + typed) {
+        const split = previous[j - 2] + 0.5;
+        if (split <= best + 1e-9) { best = split; direction = 6; }
+      }
       current[j] = best; directions[i * width + j] = direction;
     }
     twoBack = previous; previous = current;
@@ -218,6 +226,8 @@ function alignWordTokens(sourceWords, typedWords) {
   while (i || j) {
     const direction = directions[i * width + j];
     if (direction === 4) { operations.push({ type: 'transpose', source: [sourceWords[i - 2], sourceWords[i - 1]], typed: [typedWords[j - 2], typedWords[j - 1]] }); i -= 2; j -= 2; }
+    else if (direction === 5) { operations.push({ type: 'merge', source: [sourceWords[i - 2], sourceWords[i - 1]], typed: typedWords[j - 1] }); i -= 2; j -= 1; }
+    else if (direction === 6) { operations.push({ type: 'split', source: sourceWords[i - 1], typed: [typedWords[j - 2], typedWords[j - 1]] }); i -= 1; j -= 2; }
     else if (direction === 1 && i && j) { operations.push({ type: 'pair', source: sourceWords[--i], typed: typedWords[--j] }); }
     else if ((direction === 2 || !j) && i) { operations.push({ type: 'delete', source: sourceWords[--i] }); }
     else { operations.push({ type: 'insert', typed: typedWords[--j] }); }
@@ -299,18 +309,29 @@ export function classifyErrors(sourceValue, typedValue, allErrorsAreFull = false
     }
   };
   const alignment = alignWordTokens(source.words, typed.words);
-  const sourceFrequency = new Map(source.words.map(({ text }) => [text, source.words.filter((word) => word.text === text).length]));
-  const typedFrequency = new Map(typed.words.map(({ text }) => [text, typed.words.filter((word) => word.text === text).length]));
+  const frequencyMap = (words) => words.reduce((map, word) => map.set(word.text, (map.get(word.text) || 0) + 1), new Map());
+  const sourceFrequency = frequencyMap(source.words); const typedFrequency = frequencyMap(typed.words);
   for (let index = 0; index < alignment.length; index += 1) {
     const operation = alignment[index];
     if (operation.type === 'pair') { compareSeparators(operation.source.before, operation.typed.before); compareWords(operation.source.text, operation.typed.text); }
     else if (operation.type === 'delete') record('omission', operation.source.before + operation.source.text, '', 1);
     else if (operation.type === 'insert') {
-      const repeated = (typedFrequency.get(operation.typed.text) || 0) > (sourceFrequency.get(operation.typed.text) || 0);
+      const sourceOccurrences = sourceFrequency.get(operation.typed.text) || 0;
+      const repeated = sourceOccurrences > 0 && (typedFrequency.get(operation.typed.text) || 0) > sourceOccurrences;
       record(repeated ? 'repetition' : 'addition', '', operation.typed.before + operation.typed.text, 1);
-    } else {
+    } else if (operation.type === 'transpose') {
       const sourceText = operation.source.map((word) => word.before + word.text).join(''); const typedText = operation.typed.map((word) => word.before + word.text).join('');
       record('transposition', sourceText, typedText, 1);
+    } else if (operation.type === 'merge') {
+      compareSeparators(operation.source[0].before, operation.typed.before);
+      compareWords(operation.source[0].text, operation.typed.text.slice(0, operation.source[0].text.length));
+      compareSeparators(operation.source[1].before, '');
+      compareWords(operation.source[1].text, operation.typed.text.slice(operation.source[0].text.length));
+    } else {
+      compareSeparators(operation.source.before, operation.typed[0].before);
+      compareWords(operation.source.text.slice(0, operation.typed[0].text.length), operation.typed[0].text);
+      compareSeparators('', operation.typed[1].before);
+      compareWords(operation.source.text.slice(operation.typed[0].text.length), operation.typed[1].text);
     }
   }
   compareSeparators(source.trailing, typed.trailing);
