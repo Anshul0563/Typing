@@ -188,8 +188,14 @@ function characterDistance(leftValue, rightValue) {
 
 function wordSubstitutionCost(left, right) {
   if (left === right) return 0;
+  const canonical = (value) => String(value).toLocaleLowerCase().replace(/[\p{P}\p{S}]/gu, '');
+  const leftCanonical = canonical(left); const rightCanonical = canonical(right);
+  if (leftCanonical && leftCanonical === rightCanonical) return 0.1;
+  const distance = characterDistance(left, right);
   const maximum = Math.max(segmentCharacters(left).length, segmentCharacters(right).length, 1);
-  return Math.max(0.2, Math.min(1.25, characterDistance(left, right) / maximum));
+  if (distance === 1) return 0.65;
+  if (distance / maximum <= 0.25) return 1;
+  return 1.5;
 }
 
 function alignWordTokens(sourceWords, typedWords) {
