@@ -10,6 +10,10 @@ export function AuthProvider({ children }) {
     api('/auth/me').then(({ user: value }) => setUser(value)).catch(() => localStorage.removeItem('typepath_token')).finally(() => setLoading(false));
   }, []);
   useEffect(() => { const clearSession = () => setUser(null); window.addEventListener('typepath:unauthorized', clearSession); return () => window.removeEventListener('typepath:unauthorized', clearSession); }, []);
+  useEffect(() => {
+    if (user) document.documentElement.dataset.authRole = user.role;
+    else delete document.documentElement.dataset.authRole;
+  }, [user]);
   const authenticate = (data) => { localStorage.setItem('typepath_token', data.token); setUser(data.user); };
   const value = useMemo(() => ({ user, loading, login: async (body) => { const data = await api('/auth/login', { method: 'POST', body: JSON.stringify(body) }); authenticate(data); return data; }, register: async (body) => { const data = await api('/auth/register', { method: 'POST', body: JSON.stringify(body) }); authenticate(data); return data; }, logout: () => { localStorage.removeItem('typepath_token'); setUser(null); }, setUser }), [user, loading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

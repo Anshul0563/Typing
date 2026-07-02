@@ -568,6 +568,12 @@ button {
   margin: auto;
   padding: 0 28px;
 }
+
+/* Public-page navigation reflects an existing authenticated session. */
+:root[data-auth-role] .public-nav > div > .text-link { display: none; }
+:root[data-auth-role] .public-nav > div > .button-primary { font-size: 0; }
+:root[data-auth-role="user"] .public-nav > div > .button-primary::after { content: "Dashboard";font-size: 12px; }
+:root[data-auth-role="admin"] .public-nav > div > .button-primary::after { content: "Admin panel";font-size: 12px; }
 .public-nav > div {
   display: flex;
   align-items: center;
