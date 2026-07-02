@@ -144,6 +144,20 @@ test('every configured half-error category receives exactly half weight in pract
   }
 });
 
+test('classifies incomplete prefixes, repeated words and multi-word omissions precisely', () => {
+  const incompletePrefix = classifyErrors('typing', 'yping');
+  assert.equal(incompletePrefix.counts.incompleteWord, 1);
+  assert.equal(incompletePrefix.counts.omission, 0);
+
+  const repetition = classifyErrors('one two three', 'one two two three');
+  assert.equal(repetition.counts.repetition, 1);
+  assert.equal(repetition.counts.addition, 0);
+
+  const omittedWords = classifyErrors('one two three four', 'one four');
+  assert.equal(omittedWords.counts.omission, 2);
+  assert.equal(omittedWords.fullErrors, 2);
+});
+
 test('persisted comparison spans and category totals share one source of truth', () => {
   const result = calculateResult('Hello, one two', 'hello one  too', 60);
   const categoryTotal = Object.values(result.errorBreakdown).reduce((sum, value) => sum + value, 0);

@@ -16,7 +16,7 @@ export const examSchema = z.object({
   body: z.object({ name: z.string().trim().min(2).max(100), organization: z.string().trim().min(2).max(100), language: z.enum(['English', 'Hindi']), durationMinutes: z.coerce.number().int().min(1).max(120), paragraphLength: z.coerce.number().int().min(50), category: z.enum(examCategories), logo: z.string().trim().regex(/^(\/assets\/exams\/[a-z0-9-]+\.svg|data:image\/(?:svg\+xml|png|jpeg|webp);base64,[A-Za-z0-9+/=]+)$/, 'Choose a valid local exam icon or upload a supported image'), scoringRule: z.object({ mode: z.enum(['standard-word', 'character']), errorPenalty: z.coerce.number().min(0.1).max(10) }), status: z.enum(['active', 'inactive']).default('active'), description: z.string().trim().max(240).default('') })
 });
 export const paragraphSchema = z.object({
-  body: z.object({ title: z.string().trim().min(2).max(150), content: z.string().trim().min(50), language: z.enum(['English', 'Hindi']), exam: z.string().regex(/^[a-f\d]{24}$/i), difficulty: z.enum(['Easy', 'Medium', 'Hard']) })
+  body: z.object({ title: z.string().trim().min(2).max(150), content: z.string().trim().min(50).max(30000), language: z.enum(['English', 'Hindi']), exam: z.string().regex(/^[a-f\d]{24}$/i), difficulty: z.enum(['Easy', 'Medium', 'Hard']) })
 });
 export const paragraphListSchema = z.object({ query: z.object({ search: z.string().trim().max(100).optional(), exam: optionalId, language: z.enum(['English', 'Hindi']).optional() }) });
 export const startTestSchema = z.object({ params: idParams, body: z.object({ paragraphId: z.string().regex(/^[a-f\d]{24}$/i), requestedMode: z.enum(['TCS', 'NTA', 'Custom']).optional(), timerMinutes: z.coerce.number().int().min(1).max(120).optional() }) });

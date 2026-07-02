@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const paragraphSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
-  content: { type: String, required: true, trim: true },
+  content: { type: String, required: true, trim: true, maxlength: 30000 },
   language: { type: String, enum: ['English', 'Hindi'], required: true, index: true },
   exam: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true, index: true },
   difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard'], default: 'Medium', index: true }

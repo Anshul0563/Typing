@@ -99,11 +99,21 @@ export function classifyErrors(sourceValue, typedValue, allErrorsAreFull = false
     else if (sourceText && typedText && sourceText.localeCompare(typedText, undefined, { sensitivity: 'accent' }) === 0) category = 'capitalization';
     else if ([...sourceText, ...typedText].every((char) => isPunctuation(char))) category = 'punctuation';
     else if (sourceText.length === 2 && typedText === [...sourceText].reverse().join('')) category = 'transposition';
-    else if (!typedText) category = sourceText && left && !isWhitespace(left.source) && (!right || !isWhitespace(right.source)) ? 'incompleteWord' : 'omission';
-    else if (!sourceText) category = typedText === left?.typed || typedText === right?.typed ? 'repetition' : 'addition';
+    else if (!typedText) {
+      const touchesWord = (left?.source && !isWhitespace(left.source)) || (right?.source && !isWhitespace(right.source));
+      category = sourceText && ![...sourceText].some(isWhitespace) && touchesWord ? 'incompleteWord' : 'omission';
+    }
+    else if (!sourceText) {
+      const addedToken = typedText.trim();
+      const beforeText = operations.slice(0, cursor).map((item) => item.typed).join('').trimEnd();
+      const afterText = operations.slice(end).map((item) => item.typed).join('').trimStart();
+      const previousWord = beforeText.match(/\S+$/u)?.[0]; const nextWord = afterText.match(/^\S+/u)?.[0];
+      category = addedToken && (addedToken === previousWord || addedToken === nextWord) ? 'repetition' : 'addition';
+    }
     else if ([...sourceText, ...typedText].every((char) => isLetter(char))) category = 'spelling';
     else category = 'substitution';
-    counts[category] += 1;
+    const affectedWords = category === 'omission' ? segmentWords(sourceText).length : ['addition', 'repetition'].includes(category) ? segmentWords(typedText).length : 0;
+    counts[category] += Math.max(1, affectedWords);
     const halfCategory = ['spacing', 'capitalization', 'punctuation', 'transposition', 'paragraphic'].includes(category);
     const severity = !allErrorsAreFull && halfCategory ? 'half' : 'full';
     for (const item of run) classified.push({ ...item, severity, category });
