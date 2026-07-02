@@ -207,6 +207,39 @@
   margin: 0 0 1.5rem;
 }
 
+.chart-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.chart-title-row span {
+  color: var(--brand);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.chart-title-row h2 {
+  margin: 0.3rem 0 0;
+}
+
+.chart-title-row small {
+  color: var(--muted);
+}
+
+.analytics-donut-section {
+  min-width: 0;
+}
+
+.donut-chart-wrap {
+  width: 100%;
+  min-width: 0;
+}
+
 .chart-controls {
   display: flex;
   gap: 1rem;

@@ -3,13 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api.js';
 import { Loader } from '../components/Loader.jsx';
 import { Notice } from '../components/Toast.jsx';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Zap, Target, Calendar, Download, RefreshCw } from 'lucide-react';
 import './AnalyticsDashboard.css';
 
 const chartGrid = 'var(--chart-grid)';
 const chartAxis = 'var(--chart-axis)';
 const tooltipStyle = { backgroundColor: 'var(--chart-tooltip-bg)', border: '1px solid var(--chart-tooltip-border)', color: 'var(--chart-tooltip-text)', borderRadius: 8 };
+const chartColors = ['#2457d6', '#7352cf', '#06b6d4', '#13845f', '#f59e0b'];
 const formatDuration = (seconds) => {
   const total = Math.max(0, Math.round(Number(seconds) || 0));
   return `${Math.floor(total / 60)}m ${String(total % 60).padStart(2, '0')}s`;
@@ -39,16 +40,7 @@ export default function AnalyticsDashboard() {
       setLoading(true);
       setError('');
 
-      const [
-        summaryRes,
-        trendRes,
-        examRes,
-        modeRes,
-        weekRes,
-        hourRes,
-        progressRes,
-        detailedRes
-      ] = await Promise.all([
+      const responses = await Promise.allSettled([
         api(`/analytics/summary/${user._id}?timeRange=${timeRange}`),
         api(`/analytics/trend/${user._id}?days=${trendDays}`),
         api(`/analytics/exam-stats/${user._id}`),
@@ -58,15 +50,13 @@ export default function AnalyticsDashboard() {
         api(`/analytics/progress/${user._id}?days=${trendDays}`),
         api(`/analytics/detailed/${user._id}?timeRange=${timeRange}`)
       ]);
-
-      setSummary(summaryRes.data);
-      setTrend(trendRes.data);
-      setExamStats(examRes.data);
-      setModeComparison(modeRes.data);
-      setWeeklyPattern(weekRes.data);
-      setHourlyPattern(hourRes.data);
-      setProgressReport(progressRes.data);
-      setDetailedReport(detailedRes.data);
+      const setters = [setSummary, setTrend, setExamStats, setModeComparison, setWeeklyPattern, setHourlyPattern, setProgressReport, setDetailedReport];
+      responses.forEach((response, index) => {
+        if (response.status === 'fulfilled') setters[index](response.value.data);
+      });
+      const failures = responses.filter((response) => response.status === 'rejected');
+      if (failures.length === responses.length) throw failures[0].reason;
+      if (failures.length) setError(`${failures.length} analytics section${failures.length === 1 ? '' : 's'} could not be loaded. Available graphs are shown below.`);
     } catch (err) {
       setError(err.message || 'Failed to load analytics');
     } finally {
@@ -97,6 +87,7 @@ export default function AnalyticsDashboard() {
     const step = Math.ceil(trend.length / 50);
     return trend.filter((_, i) => i % step === 0);
   }, [trend]);
+  const examDistribution = useMemo(() => examStats.slice(0, 5).map((exam) => ({ name: exam.exam, value: exam.totalAttempts })), [examStats]);
 
   if (loading) return <Loader label="Analyzing your performance…" />;
 
@@ -249,6 +240,23 @@ export default function AnalyticsDashboard() {
               <Bar dataKey="avgAccuracy" fill="#10b981" name="Accuracy %" />
             </BarChart>
           </ResponsiveContainer>
+        </section>
+      )}
+
+      {examDistribution.length > 0 && (
+        <section className="chart-section analytics-donut-section">
+          <div className="chart-title-row"><div><span>Practice mix</span><h2>Exam Distribution</h2></div><small>Attempts by exam</small></div>
+          <div className="donut-chart-wrap">
+            <ResponsiveContainer width="100%" height={320}>
+              <PieChart>
+                <Pie data={examDistribution} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="82%" paddingAngle={3}>
+                  {examDistribution.map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={tooltipStyle} formatter={(value) => [`${value} attempts`, 'Practice']} />
+                <Legend verticalAlign="bottom" iconType="circle" />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </section>
       )}
 

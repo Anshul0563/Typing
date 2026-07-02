@@ -71,7 +71,7 @@ export const listExamParagraphs = asyncHandler(async (req, res) => {
       { case: { $eq: ['$difficulty', 'Hard'] }, then: 3 }
     ], default: 4 } } } },
     { $sort: { difficultyOrder: 1, createdAt: -1, title: 1 } },
-    { $project: { title: 1, language: 1, difficulty: 1, characterCount: { $strLenCP: '$content' } } }
+    { $project: { title: 1, language: 1, difficulty: 1, wordCount: { $size: { $regexFindAll: { input: '$content', regex: /\S+/ } } } } }
   ]);
   res.json({ success: true, exam, paragraphs });
 });
