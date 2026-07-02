@@ -183,10 +183,12 @@ function characterAlignment(sourceValue, typedValue) {
 }
 
 function missingMarker(category, text) {
-  // Rendering tokens must never expose synthetic UI symbols.
-  // Internal alignment may still use categories, but the UI should show only real user text.
-  return "";
+  if (category === 'spacing') return '␠';
+  if (category === 'paragraphic') return '↵';
+  if (category === 'punctuation') return text || '·';
+  return '∅';
 }
+
 
 export function compareTexts(
   sourceValue,
@@ -238,13 +240,7 @@ export function compareTexts(
     counts[category] += amount;
     const severity = severityFor(category);
     alignmentTree.push({ sourceText, typedText, category, severity });
-    // Rendering tokens must never include ghost/internal placeholders.
-    // If either side is empty, record the error internally but do not render markers.
-    if (!sourceText || !typedText) {
-      if (!sourceText) {
-        counts[category] += 0; // no-op (already counted)
-      }
-    }
+
     for (const operation of characterAlignment(sourceText, typedText)) {
       const sourceLength = characters(operation.source).length;
       const typedLength = characters(operation.typed).length;
@@ -256,18 +252,29 @@ export function compareTexts(
         characterStats.extraCharacters += typedLength - paired;
       }
     }
-    // Render only real user text. When one side is missing, we omit the
-    // placeholder token entirely so the UI never shows ghost symbols.
     if (sourceText) {
       push(referenceParts, sourceText, severity, category);
       push(referenceReviewParts, sourceText, severity, category);
-    }
+    } else
+      push(
+        referenceReviewParts,
+        missingMarker(category, typedText),
+        severity,
+        category,
+        true,
+      );
     if (typedText) {
       push(typedParts, typedText, severity, category);
       push(typedReviewParts, typedText, severity, category);
-    }
-    // When one side is missing we intentionally do not push anything.
-    // (The missing/extra counts are still computed for scoring.)
+    } else
+      push(
+        typedReviewParts,
+        missingMarker(category, sourceText),
+        severity,
+        category,
+        true,
+      );
+
   };
   const equal = (sourceText, typedText) => {
     if (sourceText || typedText)
@@ -297,47 +304,43 @@ export function compareTexts(
       equal(left, right);
       return;
     }
-
-    // Word-level rule: for full-word errors (spelling/substitution/incomplete/
-    // omission/addition/repetition/transposition), highlight the entire word
-    // as one full token in both panels.
-    //
-    // Only punctuation/spacing/capitalization/paragraphic remain at
-    // symbol-level (handled elsewhere via compareSeparators / punctuation checks).
-
-    // Keep capitalization as-is (half error category), but still as a whole word.
-    if (
-      left &&
-      right &&
-      left.localeCompare(right, undefined, { sensitivity: "accent" }) === 0
-    ) {
-      record("capitalization", left, right);
-      return;
+    const operations = characterAlignment(left, right);
+    for (let cursor = 0; cursor < operations.length; ) {
+      if (operations[cursor].equal) {
+        const operation = operations[cursor++];
+        equal(operation.source, operation.typed);
+        continue;
+      }
+      let end = cursor + 1;
+      while (end < operations.length && !operations[end].equal) end += 1;
+      const run = operations.slice(cursor, end);
+      const sourceText = run.map((operation) => operation.source).join("");
+      const typedText = run.map((operation) => operation.typed).join("");
+      let category;
+      if (run.length === 1 && run[0].transposed) category = "transposition";
+      else if (
+        sourceText &&
+        typedText &&
+        sourceText.localeCompare(typedText, undefined, {
+          sensitivity: "accent",
+        }) === 0
+      )
+        category = "capitalization";
+      else if (
+        [...sourceText, ...typedText].length &&
+        [...sourceText, ...typedText].every(isPunctuation)
+      )
+        category = "punctuation";
+      else if (!typedText && sourceText) category = "incompleteWord";
+      else if ([...sourceText, ...typedText].every(isLetter))
+        category = "spelling";
+      else category = "substitution";
+      record(category, sourceText, typedText);
+      cursor = end;
     }
-
-    const allPunct =
-      [...left, ...right].length > 0 && [...left, ...right].every(isPunctuation);
-    if (allPunct) {
-      record("punctuation", left, right);
-      return;
-    }
-
-    if (!right && left) {
-      record("incompleteWord", left, right);
-      return;
-    }
-
-    if (
-      [...left, ...right].length &&
-      [...left, ...right].every(isLetter)
-    ) {
-      record("spelling", left, right);
-      return;
-    }
-
-    // Default to substitution as a full-word error.
-    record("substitution", left, right);
   };
+
+
 
   const sourceFrequency = source.words.reduce(
     (map, word) => map.set(word.canonical, (map.get(word.canonical) || 0) + 1),
