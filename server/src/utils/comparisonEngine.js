@@ -89,6 +89,9 @@ function missingMarker(category, text) {
 export function compareTexts(sourceValue, typedValue, allErrorsAreFull = false) {
   const source = tokenize(sourceValue); const typed = tokenize(typedValue);
   const counts = { ...EMPTY_COUNTS };
+  const alignmentTree = [];
+  const characterStats = { correctCharacters: 0, wrongCharacters: 0, omittedCharacters: 0, extraCharacters: 0 };
+  const wordStats = { wrongWords: 0, omittedWords: 0, extraWords: 0 };
   const referenceParts = []; const typedParts = []; const referenceReviewParts = []; const typedReviewParts = [];
   const severityFor = (category) => !allErrorsAreFull && HALF_CATEGORIES.has(category) ? 'half' : 'full';
   const push = (parts, text, severity = 'correct', category = 'correct', missing = false) => {
@@ -99,12 +102,20 @@ export function compareTexts(sourceValue, typedValue, allErrorsAreFull = false) 
   };
   const record = (category, sourceText, typedText, amount = 1) => {
     counts[category] += amount; const severity = severityFor(category);
+    alignmentTree.push({ sourceText, typedText, category, severity });
+    for (const operation of characterAlignment(sourceText, typedText)) {
+      const sourceLength = characters(operation.source).length; const typedLength = characters(operation.typed).length;
+      if (operation.equal) characterStats.correctCharacters += sourceLength;
+      else { const paired = Math.min(sourceLength, typedLength); characterStats.wrongCharacters += paired; characterStats.omittedCharacters += sourceLength - paired; characterStats.extraCharacters += typedLength - paired; }
+    }
     if (sourceText) { push(referenceParts, sourceText, severity, category); push(referenceReviewParts, sourceText, severity, category); }
     else push(referenceReviewParts, missingMarker(category, typedText), severity, category, true);
     if (typedText) { push(typedParts, typedText, severity, category); push(typedReviewParts, typedText, severity, category); }
     else push(typedReviewParts, missingMarker(category, sourceText), severity, category, true);
   };
   const equal = (sourceText, typedText) => {
+    if (sourceText || typedText) alignmentTree.push({ sourceText, typedText, category: 'correct', severity: 'correct' });
+    characterStats.correctCharacters += characters(sourceText).length;
     push(referenceParts, sourceText); push(referenceReviewParts, sourceText);
     push(typedParts, typedText); push(typedReviewParts, typedText);
   };
@@ -133,17 +144,23 @@ export function compareTexts(sourceValue, typedValue, allErrorsAreFull = false) 
 
   const sourceFrequency = source.words.reduce((map, word) => map.set(word.canonical, (map.get(word.canonical) || 0) + 1), new Map());
   const typedFrequency = typed.words.reduce((map, word) => map.set(word.canonical, (map.get(word.canonical) || 0) + 1), new Map());
-  const omit = (word) => record('omission', word.separator + word.text, '');
+  const omit = (word) => { wordStats.omittedWords += 1; record('omission', word.separator + word.text, ''); };
   const add = (word) => {
     const sourceCount = sourceFrequency.get(word.canonical) || 0;
     const repetition = sourceCount > 0 && (typedFrequency.get(word.canonical) || 0) > sourceCount;
-    record(repetition ? 'repetition' : 'addition', '', word.separator + word.text);
+    wordStats.extraWords += 1; record(repetition ? 'repetition' : 'addition', '', word.separator + word.text);
   };
-  const pair = (sourceWord, typedWord) => { compareSeparators(sourceWord.separator, typedWord.separator); compareWords(sourceWord.text, typedWord.text); };
+  const pair = (sourceWord, typedWord) => {
+    const fullBefore = counts.omission + counts.addition + counts.spelling + counts.substitution + counts.repetition + counts.incompleteWord;
+    compareSeparators(sourceWord.separator, typedWord.separator); compareWords(sourceWord.text, typedWord.text);
+    const fullAfter = counts.omission + counts.addition + counts.spelling + counts.substitution + counts.repetition + counts.incompleteWord;
+    if (fullAfter > fullBefore) wordStats.wrongWords += 1;
+  };
   const resolveRegion = (sourceRegion, typedRegion) => {
     if (!sourceRegion.length) { typedRegion.forEach(add); return; }
     if (!typedRegion.length) { sourceRegion.forEach(omit); return; }
     if (sourceRegion.length === 2 && typedRegion.length === 2 && sourceRegion[0].canonical === typedRegion[1].canonical && sourceRegion[1].canonical === typedRegion[0].canonical) {
+      wordStats.wrongWords += 2;
       record('transposition', sourceRegion.map((word) => word.separator + word.text).join(''), typedRegion.map((word) => word.separator + word.text).join('')); return;
     }
     if (sourceRegion.length === 2 && typedRegion.length === 1 && sourceRegion.map((word) => word.canonical).join('') === typedRegion[0].canonical) {
@@ -164,6 +181,7 @@ export function compareTexts(sourceValue, typedValue, allErrorsAreFull = false) 
   for (const anchor of [...anchors, { sourceIndex: source.words.length, typedIndex: typed.words.length, terminal: true }]) {
     resolveRegion(source.words.slice(sourceCursor, anchor.sourceIndex), typed.words.slice(typedCursor, anchor.typedIndex));
     if (anchor.transposition) {
+      wordStats.wrongWords += 2;
       record('transposition', source.words.slice(anchor.sourceIndex, anchor.sourceIndex + 2).map((word) => word.separator + word.text).join(''), typed.words.slice(anchor.typedIndex, anchor.typedIndex + 2).map((word) => word.separator + word.text).join(''));
       sourceCursor = anchor.sourceIndex + 2; typedCursor = anchor.typedIndex + 2;
     } else {
@@ -174,5 +192,14 @@ export function compareTexts(sourceValue, typedValue, allErrorsAreFull = false) 
   compareSeparators(source.trailing, typed.trailing);
   const halfErrors = allErrorsAreFull ? 0 : [...HALF_CATEGORIES].reduce((sum, category) => sum + counts[category], 0);
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
-  return { counts, fullErrors: total - halfErrors, halfErrors, weightedErrors: total - halfErrors * 0.5, referenceParts, typedParts, referenceReviewParts, typedReviewParts };
+  const referenceCharacters = characters(String(sourceValue ?? '').normalize('NFC').replace(/\r\n?/g, '\n')).length;
+  const typedCharacters = characters(String(typedValue ?? '').normalize('NFC').replace(/\r\n?/g, '\n')).length;
+  return {
+    alignmentTree, counts, fullErrors: total - halfErrors, halfErrors, weightedErrors: total - halfErrors * 0.5,
+    referenceCharacters, typedCharacters, ...characterStats,
+    totalErrors: characterStats.wrongCharacters + characterStats.omittedCharacters + characterStats.extraCharacters,
+    referenceWords: source.words.length, typedWords: typed.words.length, ...wordStats,
+    totalWordErrors: wordStats.wrongWords + wordStats.omittedWords + wordStats.extraWords,
+    referenceParts, typedParts, referenceReviewParts, typedReviewParts
+  };
 }
