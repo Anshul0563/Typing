@@ -5,7 +5,7 @@ const exam = (name, organization, category, logo, options = {}) => ({
   logo: `/assets/exams/${logo}.svg`,
   language: options.language || 'English',
   durationMinutes: options.duration || 10,
-  paragraphLength: options.paragraphLength || (options.language === 'Hindi' ? 1500 : 1750),
+  paragraphLength: options.paragraphLength || (options.language === 'Hindi' ? 300 : 350),
   description: options.description || `${organization} typing practice for ${name} in a focused exam-style environment.`,
   scoringRule: options.scoringRule || { mode: 'standard-word', errorPenalty: 1 },
   status: 'active',
@@ -29,7 +29,7 @@ export const examCategories = [
 export const defaultExams = [
   exam('SSC Stenographer (English)', 'Staff Selection Commission', 'SSC', 'ssc', { description: 'English stenographer typing practice based on SSC-style speed and accuracy expectations.' }),
   exam('SSC Stenographer (Hindi)', 'Staff Selection Commission', 'SSC', 'ssc', { language: 'Hindi', description: 'Hindi stenographer typing practice for SSC candidates with exam-style timing.' }),
-  exam('SSC CGL DEST', 'Staff Selection Commission', 'SSC', 'ssc', { duration: 15, paragraphLength: 2000, description: 'Data Entry Speed Test practice for SSC CGL aspirants.' }),
+  exam('SSC CGL DEST', 'Staff Selection Commission', 'SSC', 'ssc', { duration: 15, paragraphLength: 400, description: 'Data Entry Speed Test practice for SSC CGL aspirants.' }),
   exam('SSC CHSL DEST', 'Staff Selection Commission', 'SSC', 'ssc', { description: 'Data Entry Speed Test practice for SSC CHSL aspirants.' }),
 
   exam('DSSSB JSA', 'Delhi Subordinate Services Selection Board', 'DSSSB', 'dsssb', { description: 'Typing practice for DSSSB Junior Secretariat Assistant recruitment.' }),
@@ -62,6 +62,6 @@ export const defaultExams = [
   exam('Bihar SSC Stenographer', 'Bihar Staff Selection Commission', 'State Exams', 'bihar-ssc', { description: 'Typing practice for Bihar SSC stenographer candidates.' }),
   exam('Haryana CET Clerk', 'Haryana Staff Selection Commission', 'State Exams', 'haryana-ssc', { description: 'Typing practice for Haryana CET Clerk candidates.' }),
 
-  exam('English Typing Practice', 'SAS Academy', 'Practice', 'practice', { duration: 5, paragraphLength: 900, description: 'Short English typing practice for daily speed and accuracy improvement.' }),
-  exam('Hindi Typing Practice', 'SAS Academy', 'Practice', 'practice', { language: 'Hindi', duration: 5, paragraphLength: 800, description: 'Short Hindi typing practice for daily speed and accuracy improvement.' })
+  exam('English Typing Practice', 'SAS Academy', 'Practice', 'practice', { duration: 5, paragraphLength: 180, description: 'Short English typing practice for daily speed and accuracy improvement.' }),
+  exam('Hindi Typing Practice', 'SAS Academy', 'Practice', 'practice', { language: 'Hindi', duration: 5, paragraphLength: 160, description: 'Short Hindi typing practice for daily speed and accuracy improvement.' })
 ];
