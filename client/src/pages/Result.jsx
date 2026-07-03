@@ -49,7 +49,7 @@ export default function Result() {
 
   const formatTime = (value) => { const seconds = Math.max(0, Math.round(Number(value) || 0)); return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`; };
   const ssc = result.evaluationMode === 'ssc-stenographer';
-  const fullErrors = result.fullErrors ?? result.totalErrors ?? 0;
+  const fullErrors = result.fullErrors ?? result.totalWordErrors ?? result.totalErrors ?? 0;
   const halfErrors = result.halfErrors ?? 0;
   const weightedErrors = result.weightedErrors ?? result.errorUnits ?? result.totalErrors ?? 0;
   const breakdown = result.errorBreakdown || {};
@@ -62,8 +62,8 @@ export default function Result() {
   ];
   const detailGroups = [
     ['Speed & penalty', 'Final speed after the selected error weight.', Gauge, 'blue', [['Gross WPM', result.grossWpm], ['Net WPM', result.netWpm], ['Weighted errors', weightedErrors], ['Penalty', `${result.errorPenalty ?? 1}×`]]],
-    ['Characters', 'Unicode character-by-character alignment.', Target, 'green', [['Reference', result.referenceCharacters], ['Typed', result.typedCharacters], ['Correct', result.correctCharacters], ['Raw edits', result.totalErrors]]],
-    ['Words', 'Word-level alignment for review.', FileText, 'violet', [['Reference', result.referenceWords], ['Typed', result.typedWords], ['Wrong', result.wrongWords], ['Omitted', result.omittedWords], ['Extra', result.extraWords]]],
+    ['Words', 'Complete word-level performance.', FileText, 'violet', [['Reference', result.referenceWords], ['Typed', result.typedWords], ['Correct', Math.max(0, (result.referenceWords ?? 0) - (result.wrongWords ?? 0) - (result.omittedWords ?? 0))], ['Errors', result.totalWordErrors ?? result.totalErrors]]],
+    ['Word errors', 'Word-level alignment for review.', Target, 'green', [['Wrong', result.wrongWords], ['Omitted', result.omittedWords], ['Extra', result.extraWords], ['Total', result.totalWordErrors ?? result.totalErrors]]],
     ['Typing activity', 'Activity captured during this attempt.', Keyboard, 'amber', [['Keystrokes', result.totalKeystrokes], ['Backspaces', result.backspaceCount], ['Full errors', fullErrors], ['Half errors', halfErrors]]]
   ];
 
@@ -78,7 +78,7 @@ export default function Result() {
 
     <section className="result-breakdown panel"><div className="result-section-heading"><span>Attempt data</span><h2>Detailed metrics</h2></div><div className="breakdown-card-grid">{detailGroups.map(([title, detail, Icon, tone, items]) => <article className={`breakdown-group-card breakdown-${tone}`} key={title}><header><span><Icon /></span><div><h3>{title}</h3><p>{detail}</p></div></header><div>{items.map(([label, value]) => <span className="breakdown-chip neutral" key={label}><small>{label}</small><strong>{value ?? 0}</strong></span>)}</div></article>)}</div></section>
 
-    <section className="formula-card"><div><span>Formula used</span><h2>{ssc ? 'Steno formula' : 'Standard exam formula'}</h2></div><p><strong>Accuracy:</strong> ((Reference characters − {ssc ? 'total errors' : 'weighted errors'}) ÷ Reference characters) × 100</p><p><strong>Weighted errors:</strong> {ssc ? 'Every mistake × 1' : 'Full errors + (Half errors × 0.5)'}</p><p><strong>Gross WPM:</strong> (Typed characters ÷ 5) ÷ Time in minutes</p><p><strong>Net WPM:</strong> Gross WPM − (Weighted errors × Penalty ÷ Time in minutes)</p></section>
+    <section className="formula-card"><div><span>Formula used</span><h2>{ssc ? 'Steno formula' : 'Standard exam formula'}</h2></div><p><strong>Accuracy:</strong> ((Reference words − {ssc ? 'total errors' : 'weighted errors'}) ÷ Reference words) × 100</p><p><strong>Weighted errors:</strong> {ssc ? 'Every mistake × 1' : 'Full errors + (Half errors × 0.5)'}</p><p><strong>Gross WPM:</strong> Typed words ÷ Time in minutes</p><p><strong>Net WPM:</strong> Gross WPM − (Weighted errors × Penalty ÷ Time in minutes)</p></section>
 
     <div className="result-actions"><Link className="button button-primary" to={`/test/${result.exam?._id}`}><RotateCcw size={17} />Retake test</Link><Link className="button button-secondary" to="/results"><LayoutGrid size={17} />View history</Link><Link className="button button-secondary" to="/dashboard"><LayoutGrid size={17} />All exams</Link></div>
   </div>;

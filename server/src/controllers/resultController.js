@@ -9,7 +9,7 @@ import { calculateElapsedSeconds } from '../utils/testTiming.js';
 import { resolveEvaluationMode } from '../utils/examMode.js';
 
 const modeScoringRules = {
-  TCS: { mode: 'character', errorPenalty: 1 },
+  TCS: { mode: 'standard-word', errorPenalty: 1 },
   // Mode labels describe the interface; classified full/half errors remain the scoring source of truth.
   NTA: { mode: 'standard-word', errorPenalty: 1 },
   Custom: { mode: 'standard-word', errorPenalty: 1 }
