@@ -9,12 +9,6 @@ const REPOSITORY = 'Anshul0563/Typing-Desktop';
 const RELEASE_API = `https://api.github.com/repos/${REPOSITORY}/releases/latest`;
 const RELEASES_URL = `https://github.com/${REPOSITORY}/releases`;
 const formatSize = (bytes) => bytes ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : 'Size unavailable';
-const AndroidLogo = () => <svg viewBox="0 0 64 64" role="img" aria-label="Android logo">
-  <path d="M20.5 20 15 10.5M43.5 20l5.5-9.5" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-  <path d="M10 47C10 30.4 19.8 20 32 20s22 10.4 22 27H10Z" fill="currentColor" />
-  <circle cx="23" cy="35" r="2.6" fill="white" />
-  <circle cx="41" cy="35" r="2.6" fill="white" />
-</svg>;
 
 export default function WindowsDownload() {
   const { settings } = useSiteSettings();
@@ -73,7 +67,7 @@ export default function WindowsDownload() {
       </section>
 
       <section className="download-card download-card-android">
-        <div className="download-android-icon"><AndroidLogo /></div>
+        <div className="download-android-icon"><img src="/assets/android-official.svg" alt="Android" /></div>
         <div className="download-release-info">
           <small>Android app</small>
           <h2>Coming soon</h2>

@@ -103,7 +103,7 @@
 .download-app-icon span { background:linear-gradient(145deg,#3679eb,#1552bd); }
 .download-app-icon span:first-child { border-radius:8px 2px 2px 2px; }.download-app-icon span:nth-child(2) { border-radius:2px 8px 2px 2px; }.download-app-icon span:nth-child(3) { border-radius:2px 2px 2px 8px; }.download-app-icon span:last-child { border-radius:2px 2px 8px 2px; }
 .download-android-icon { width:176px;aspect-ratio:1;display:grid;place-items:center;border-radius:35px;background:linear-gradient(145deg,#f2fff6,#d8f5e1);color:#1d9b50;box-shadow:inset 0 0 0 1px #c6e8d1,0 12px 28px rgba(29,155,80,.12); }
-.download-android-icon svg { width:88px;height:88px;stroke-width:1.65; }
+.download-android-icon img { width:88px;height:104px;object-fit:contain; }
 .download-release-info>small { color:var(--brand);font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase; }
 .download-release-info h2 { margin:8px 0 12px;font-size:30px;letter-spacing:-.035em; }
 .download-release-info>p { margin:0 0 20px;color:var(--muted);font-size:13px;line-height:1.65; }
@@ -115,7 +115,7 @@
 @keyframes download-spin { to { transform:rotate(360deg); } }
 .download-features { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:900px;margin:22px auto 0; }
 .download-features article { display:flex;align-items:flex-start;gap:12px;padding:19px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.76); }.download-features svg { flex:0 0 auto;width:19px;color:var(--brand); }.download-features strong { display:block;font-size:12px; }.download-features p { margin:6px 0 0;color:var(--muted);font-size:10px;line-height:1.55; }
-@media (max-width:700px) { .download-page>.public-nav { padding-inline:16px; }.download-main { width:min(100% - 24px,1120px);padding:55px 0 65px; }.download-hero { margin-bottom:30px; }.download-hero h1 { font-size:39px; }.download-card { grid-template-columns:1fr;gap:25px;padding:27px 20px;border-radius:22px;text-align:center; }.download-app-icon,.download-android-icon { width:130px;margin:auto;border-radius:27px; }.download-app-icon { padding:19px; }.download-android-icon svg { width:62px;height:62px; }.download-meta,.download-actions { justify-content:center; }.download-release-info .button { justify-content:center;width:100%; }.download-features { grid-template-columns:1fr; }.download-features article { text-align:left; } }
+@media (max-width:700px) { .download-page>.public-nav { padding-inline:16px; }.download-main { width:min(100% - 24px,1120px);padding:55px 0 65px; }.download-hero { margin-bottom:30px; }.download-hero h1 { font-size:39px; }.download-card { grid-template-columns:1fr;gap:25px;padding:27px 20px;border-radius:22px;text-align:center; }.download-app-icon,.download-android-icon { width:130px;margin:auto;border-radius:27px; }.download-app-icon { padding:19px; }.download-android-icon img { width:62px;height:74px; }.download-meta,.download-actions { justify-content:center; }.download-release-info .button { justify-content:center;width:100%; }.download-features { grid-template-columns:1fr; }.download-features article { text-align:left; } }
 .student-workspace { min-height:100vh;display:flex;flex-direction:column; }
 .student-main { flex:1; }
 .site-footer-workspace { background:var(--student-surface);border-color:var(--student-border);color:var(--student-muted); }
